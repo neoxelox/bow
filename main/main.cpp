@@ -5,7 +5,7 @@
 #include "esp_chip_info.h"
 #include "esp_flash.h"
 
-void app_main(void)
+extern "C" void app_main(void)
 {
     printf("Hello world!\n");
 
