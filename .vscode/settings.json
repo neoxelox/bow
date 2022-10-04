@@ -4,10 +4,12 @@
   "idf.customExtraPaths": "/home/alex/.espressif/tools/xtensa-esp-elf-gdb/11.2_20220823/xtensa-esp-elf-gdb/bin:/home/alex/.espressif/tools/riscv32-esp-elf-gdb/11.2_20220823/riscv32-esp-elf-gdb/bin:/home/alex/.espressif/tools/xtensa-esp32-elf/esp-2022r1-11.2.0/xtensa-esp32-elf/bin:/home/alex/.espressif/tools/xtensa-esp32s2-elf/esp-2022r1-11.2.0/xtensa-esp32s2-elf/bin:/home/alex/.espressif/tools/xtensa-esp32s3-elf/esp-2022r1-11.2.0/xtensa-esp32s3-elf/bin:/home/alex/.espressif/tools/riscv32-esp-elf/esp-2022r1-11.2.0/riscv32-esp-elf/bin:/home/alex/.espressif/tools/esp32ulp-elf/2.35_20220830/esp32ulp-elf/bin:/home/alex/.espressif/tools/cmake/3.24.0/bin:/home/alex/.espressif/tools/openocd-esp32/v0.11.0-esp32-20220706/openocd-esp32/bin:/home/alex/.espressif/tools/ninja/1.10.2",
   "idf.customExtraVars": "{\"OPENOCD_SCRIPTS\":\"/home/alex/.espressif/tools/openocd-esp32/v0.11.0-esp32-20220706/openocd-esp32/share/openocd/scripts\"}",
   "idf.espIdfPath": "/home/alex/esp/esp-idf",
-  "idf.openOcdConfigs": ["interface/ftdi/esp32_devkitj_v1.cfg", "target/esp32s3.cfg"],
+  "idf.openOcdConfigs": ["board/esp32s3-builtin.cfg"],
   "idf.pythonBinPath": "/home/alex/.espressif/python_env/idf5.0_py3.10_env/bin/python",
   "idf.toolsPath": "/home/alex/.espressif",
   "files.associations": {
     "esp_flash.h": "c"
-  }
+  },
+  "idf.port": "/dev/ttyACM0",
+  "idf.flashType": "JTAG"
 }

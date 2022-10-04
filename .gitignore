@@ -42,6 +42,9 @@ __pycache__/
 *.out
 *.app
 
+# Debug logs
+debug.log
+
 # Distributions
 dist/
 build/
