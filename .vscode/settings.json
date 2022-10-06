@@ -8,7 +8,24 @@
   "idf.pythonBinPath": "/home/alex/.espressif/python_env/idf5.0_py3.10_env/bin/python",
   "idf.toolsPath": "/home/alex/.espressif",
   "files.associations": {
-    "esp_flash.h": "c"
+    "esp_flash.h": "c",
+    "cstdarg": "cpp",
+    "esp_attr.h": "c",
+    "cctype": "cpp",
+    "cmath": "cpp",
+    "compare": "cpp",
+    "concepts": "cpp",
+    "cstdio": "cpp",
+    "cstdlib": "cpp",
+    "type_traits": "cpp",
+    "utility": "cpp",
+    "initializer_list": "cpp",
+    "limits": "cpp",
+    "new": "cpp",
+    "*.tcc": "cpp",
+    "cinttypes": "cpp",
+    "cstdint": "cpp",
+    "typeinfo": "cpp"
   },
   "idf.port": "/dev/ttyACM0",
   "idf.flashType": "JTAG"

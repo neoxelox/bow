@@ -7,12 +7,14 @@
 
 namespace logger
 {
-    Logger::Logger(esp_log_level_t level)
+    Logger Logger::New(esp_log_level_t level)
     {
-        this->SetLevel(level);
-    }
+        Logger logger;
 
-    Logger::~Logger() {}
+        logger.SetLevel(level);
+
+        return logger;
+    }
 
     esp_log_level_t Logger::GetLevel() const
     {
