@@ -7,11 +7,11 @@
 
 namespace logger
 {
-    Logger Logger::New(esp_log_level_t level)
+    Logger *Logger::New(esp_log_level_t level)
     {
-        Logger logger;
+        Logger *logger = new Logger();
 
-        logger.SetLevel(level);
+        logger->SetLevel(level);
 
         return logger;
     }

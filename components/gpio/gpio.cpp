@@ -5,24 +5,31 @@
 
 namespace gpio
 {
-    Gpio::Gpio(gpio_num_t pin, gpio_mode_t mode) : Pin{pin}, Mode{mode}
+    Gpio *Gpio::New(gpio_num_t pin, gpio_mode_t mode)
     {
-        ESP_ERROR_CHECK(!GPIO_IS_VALID_GPIO(this->Pin));
+        Gpio *gpio = new Gpio();
 
-        if (this->Mode >= GPIO_MODE_OUTPUT)
-            ESP_ERROR_CHECK(!GPIO_IS_VALID_OUTPUT_GPIO(this->Pin));
+        ESP_ERROR_CHECK(!GPIO_IS_VALID_GPIO(pin));
 
-        ESP_ERROR_CHECK(gpio_reset_pin(this->Pin));
+        if (mode >= GPIO_MODE_OUTPUT)
+            ESP_ERROR_CHECK(!GPIO_IS_VALID_OUTPUT_GPIO(pin));
+
+        ESP_ERROR_CHECK(gpio_reset_pin(pin));
+
+        gpio->Pin = pin;
+        gpio->Mode = mode;
 
         const gpio_config_t cfg = {
-            .pin_bit_mask = 1ull << this->Pin,
-            .mode = this->Mode,
+            .pin_bit_mask = 1ull << gpio->Pin,
+            .mode = gpio->Mode,
             .pull_up_en = GPIO_PULLUP_DISABLE,
             .pull_down_en = GPIO_PULLDOWN_ENABLE,
             .intr_type = GPIO_INTR_DISABLE,
         };
 
         ESP_ERROR_CHECK(gpio_config(&cfg));
+
+        return gpio;
     }
 
     void Gpio::DigitalWrite(int level)

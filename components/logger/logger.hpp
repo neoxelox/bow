@@ -13,7 +13,7 @@ namespace logger
         int espLog(esp_log_level_t level, const char *tag, const char *format, va_list args);
 
     public:
-        static Logger New(esp_log_level_t level);
+        static Logger *New(esp_log_level_t level);
 
         esp_log_level_t GetLevel() const;
         void SetLevel(esp_log_level_t level);

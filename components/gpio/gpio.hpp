@@ -12,11 +12,11 @@ namespace gpio
     class Gpio
     {
     public:
-        const gpio_num_t Pin;
-        const gpio_mode_t Mode;
+        gpio_num_t Pin;
+        gpio_mode_t Mode;
 
     public:
-        Gpio(gpio_num_t pin, gpio_mode_t mode);
+        static Gpio *New(gpio_num_t pin, gpio_mode_t mode);
 
         void DigitalWrite(int level);
         int DigitalRead();
