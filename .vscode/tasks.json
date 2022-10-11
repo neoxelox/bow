@@ -283,6 +283,42 @@
           }
         }
       }
+    },
+    {
+      "label": "OpenOCD: Start openOCD no RTOS",
+      "type": "shell",
+      "isBackground": true,
+      "command": "openocd -c \"set ESP_RTOS none\" -s ${command:espIdf.getOpenOcdScriptValue} ${command:espIdf.getOpenOcdConfigs}",
+      "windows": {
+        "command": "openocd.exe -c \"set ESP_RTOS none\" -s ${command:espIdf.getOpenOcdScriptValue} ${command:espIdf.getOpenOcdConfigs}",
+        "options": {
+          "env": {
+            "PATH": "${env:PATH};${config:idf.customExtraPaths}"
+          }
+        }
+      },
+      "options": {
+        "env": {
+          "PATH": "${env:PATH}:${config:idf.customExtraPaths}"
+        }
+      },
+      "problemMatcher": [
+        {
+          "pattern": [
+            {
+              "regexp": ".",
+              "file": 1,
+              "location": 2,
+              "message": 3
+            }
+          ],
+          "background": {
+            "activeOnStart": true,
+            "beginsPattern": ".",
+            "endsPattern": "."
+          }
+        }
+      ]
     }
   ]
 }
