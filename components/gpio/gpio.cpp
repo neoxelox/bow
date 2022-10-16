@@ -54,7 +54,7 @@ namespace gpio
 
     void Gpio::AttachInterrupt(gpio_int_type_t type, gpio_isr_t handler, void *args)
     {
-        esp_err_t ret = gpio_install_isr_service(0);
+        esp_err_t ret = gpio_install_isr_service(ESP_INTR_FLAG_EDGE);
         if (ret != ESP_OK && ret != ESP_ERR_INVALID_STATE)
             ESP_ERROR_CHECK(ret);
 
