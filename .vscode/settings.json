@@ -25,7 +25,8 @@
     "*.tcc": "cpp",
     "cinttypes": "cpp",
     "cstdint": "cpp",
-    "typeinfo": "cpp"
+    "typeinfo": "cpp",
+    "queue.h": "c"
   },
   "idf.port": "/dev/ttyACM0",
   "idf.flashType": "JTAG"
