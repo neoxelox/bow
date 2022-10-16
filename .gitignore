@@ -3,6 +3,7 @@
 *.tmlanguage.cache
 *.tmPreferences.cache
 *.stTheme.cache
+.superinvoke_cache/
 *.sublime-workspace
 .DS_Store/
 __pycache__/
