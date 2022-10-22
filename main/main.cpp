@@ -2,6 +2,7 @@
 #include "esp_app_desc.h"
 #include "esp_timer.h"
 #include "logger.hpp"
+#include "device.hpp"
 
 namespace main
 {
@@ -11,24 +12,27 @@ namespace main
     {
     private:
         const esp_app_desc_t *description;
-        logger::Logger logger;
+        logger::Logger *logger;
+        device::Receiver *receiver;
+        device::Transmitter *transmitter;
 
     public:
-        static App New()
+        static App *New()
         {
-            App app;
+            App *app = new App();
 
             int64_t elapsed = esp_timer_get_time();
 
-            app.description = esp_app_get_description();
-
             // Inject dependencies
-
-            app.logger = logger::Logger::New((esp_log_level_t)CONFIG_LOG_DEFAULT_LEVEL);
+            app->description = esp_app_get_description();
+            app->logger = logger::Logger::New((esp_log_level_t)CONFIG_LOG_DEFAULT_LEVEL);
+            app->receiver = device::Receiver::New(app->logger);
+            app->transmitter = device::Transmitter::New(app->logger);
 
             elapsed = esp_timer_get_time() - elapsed;
-            app.logger.Info(TAG, "Startup took %f ms", (float)(elapsed / 1000.0l));
-            app.logger.Info(TAG, "==================== %s v%s ====================", app.description->project_name, app.description->version);
+            app->logger->Info(TAG, "Startup took %f ms", (float)(elapsed / 1000.0l));
+            app->logger->Info(TAG, "==================== %s v%s ====================",
+                              app->description->project_name, app->description->version);
 
             return app;
         }
@@ -36,7 +40,7 @@ namespace main
 }
 
 // App dependencies container
-static main::App app;
+static main::App *app;
 
 extern "C" void app_main(void)
 {
