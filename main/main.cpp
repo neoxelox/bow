@@ -3,6 +3,7 @@
 #include "esp_timer.h"
 #include "logger.hpp"
 #include "device.hpp"
+#include "status.hpp"
 
 namespace main
 {
@@ -15,6 +16,7 @@ namespace main
         logger::Logger *logger;
         device::Receiver *receiver;
         device::Transmitter *transmitter;
+        status::Controller *status;
 
     public:
         static App *New()
@@ -28,6 +30,7 @@ namespace main
             app->logger = logger::Logger::New((esp_log_level_t)CONFIG_LOG_DEFAULT_LEVEL);
             app->receiver = device::Receiver::New(app->logger);
             app->transmitter = device::Transmitter::New(app->logger);
+            app->status = status::Controller::New(app->logger);
 
             elapsed = esp_timer_get_time() - elapsed;
             app->logger->Info(TAG, "Startup took %f ms", (float)(elapsed / 1000.0l));
