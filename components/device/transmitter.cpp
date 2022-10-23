@@ -19,7 +19,7 @@ namespace device
         if (!transmitter->queue)
             ESP_ERROR_CHECK(ESP_ERR_NO_MEM);
 
-        transmitter->pin = gpio::Gpio::New(GPIO_NUM_1, GPIO_MODE_OUTPUT);
+        transmitter->pin = gpio::Digital::New(GPIO_NUM_1, GPIO_MODE_OUTPUT);
         transmitter->pin->AttachPullResistor(GPIO_PULLDOWN_ONLY);
 
         transmitter->lock = portMUX_INITIALIZER_UNLOCKED;
@@ -60,7 +60,7 @@ namespace device
 
         taskENTER_CRITICAL(&(this->lock));
 
-        this->pin->DigitalWrite(gpio::LOW);
+        this->pin->SetLevel(gpio::LOW);
 
         for (int k = 0; k < replays; k++)
         {
@@ -80,21 +80,21 @@ namespace device
             }
         }
 
-        this->pin->DigitalWrite(gpio::LOW);
+        this->pin->SetLevel(gpio::LOW);
 
         taskEXIT_CRITICAL(&(this->lock));
     }
 
     inline void Transmitter::sendPulses(uint32_t width, uint8_t const pulses[], size_t size)
     {
-        int level = gpio::HIGH;
+        uint32_t level = gpio::HIGH;
 
         for (int i = 0; i < size; i++)
         {
             if (pulses[i] == 0)
                 break;
 
-            this->pin->DigitalWrite(level);
+            this->pin->SetLevel(level);
             esp_rom_delay_us(pulses[i] * width);
             level = !level;
         }

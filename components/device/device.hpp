@@ -76,7 +76,7 @@ namespace device
     {
     private:
         logger::Logger *logger;
-        gpio::Gpio *pin;
+        gpio::Digital *pin;
         TaskHandle_t taskHandle;
         QueueHandle_t queue;
         uint32_t isrBuffer[BUFFER_SIZE] = {};
@@ -101,7 +101,7 @@ namespace device
     {
     private:
         logger::Logger *logger;
-        gpio::Gpio *pin;
+        gpio::Digital *pin;
         TaskHandle_t taskHandle;
         QueueHandle_t queue;
         portMUX_TYPE lock;

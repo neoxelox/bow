@@ -22,7 +22,7 @@ namespace device
         if (!receiver->queue)
             ESP_ERROR_CHECK(ESP_ERR_NO_MEM);
 
-        receiver->pin = gpio::Gpio::New(GPIO_NUM_2, GPIO_MODE_INPUT);
+        receiver->pin = gpio::Digital::New(GPIO_NUM_2, GPIO_MODE_INPUT);
         receiver->pin->AttachPullResistor(GPIO_PULLDOWN_ONLY);
         receiver->pin->AttachInterrupt(GPIO_INTR_ANYEDGE, receiver->isrFunc, receiver);
 
