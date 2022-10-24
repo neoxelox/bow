@@ -17,10 +17,6 @@ namespace status
         controller->greenPin = gpio::Analog::New(GPIO_NUM_6, GPIO_MODE_OUTPUT, LEDC_TIMER_0, LEDC_TIMER_8_BIT, 1000);
         controller->bluePin = gpio::Analog::New(GPIO_NUM_4, GPIO_MODE_OUTPUT, LEDC_TIMER_0, LEDC_TIMER_8_BIT, 1000);
 
-        controller->redPin->SetLevel(0);
-        controller->greenPin->SetLevel(255);
-        controller->bluePin->SetLevel(0);
-
         return controller;
     }
 }

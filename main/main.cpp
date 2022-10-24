@@ -4,6 +4,7 @@
 #include "logger.hpp"
 #include "device.hpp"
 #include "status.hpp"
+#include "chron.hpp"
 
 namespace main
 {
@@ -17,6 +18,7 @@ namespace main
         device::Receiver *receiver;
         device::Transmitter *transmitter;
         status::Controller *status;
+        chron::Controller *chron;
 
     public:
         static App *New()
@@ -31,6 +33,7 @@ namespace main
             app->receiver = device::Receiver::New(app->logger);
             app->transmitter = device::Transmitter::New(app->logger);
             app->status = status::Controller::New(app->logger);
+            app->chron = chron::Controller::New(app->logger);
 
             elapsed = esp_timer_get_time() - elapsed;
             app->logger->Info(TAG, "Startup took %f ms", (float)(elapsed / 1000.0l));
