@@ -19,7 +19,7 @@ namespace device
         if (!transmitter->queue)
             ESP_ERROR_CHECK(ESP_ERR_NO_MEM);
 
-        transmitter->pin = gpio::Digital::New(GPIO_NUM_1, GPIO_MODE_OUTPUT);
+        transmitter->pin = gpio::Digital::New(GPIO_NUM_38, GPIO_MODE_OUTPUT);
         transmitter->pin->AttachPullResistor(GPIO_PULLDOWN_ONLY);
 
         transmitter->lock = portMUX_INITIALIZER_UNLOCKED;

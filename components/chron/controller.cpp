@@ -14,7 +14,7 @@ namespace chron
         controller->logger = logger;
 
         ESP_ERROR_CHECK(i2cdev_init());
-        ESP_ERROR_CHECK(ds3231_init_desc(&controller->dev, I2C_NUM_0, GPIO_NUM_15, GPIO_NUM_16));
+        ESP_ERROR_CHECK(ds3231_init_desc(&controller->dev, I2C_NUM_0, GPIO_NUM_1, GPIO_NUM_2));
 
         ESP_ERROR_CHECK(ds3231_clear_oscillator_stop_flag(&controller->dev));
         ESP_ERROR_CHECK(ds3231_clear_alarm_flags(&controller->dev, DS3231_ALARM_BOTH));
