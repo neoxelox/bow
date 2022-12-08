@@ -46,7 +46,7 @@ namespace device
         while (1)
         {
             xQueueReceive(This->queue, &packet, portMAX_DELAY);
-            This->logger->Info(TAG, "Tx | Data: %s | Protocol: %d", packet->Data, packet->ProtocolID);
+            This->logger->Debug(TAG, "Tx | Data: %s | Protocol: %d", packet->Data, packet->ProtocolID);
 
             This->encode(packet, 3);
 
