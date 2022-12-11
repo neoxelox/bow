@@ -24,7 +24,7 @@ namespace device
 
         transmitter->lock = portMUX_INITIALIZER_UNLOCKED;
 
-        xTaskCreatePinnedToCore(transmitter->taskFunc, "TransmitterTask", 4 * 1024, transmitter, 10, &transmitter->taskHandle, 1);
+        xTaskCreatePinnedToCore(transmitter->taskFunc, "Transmitter", 4 * 1024, transmitter, 10, &transmitter->taskHandle, 1);
 
         return transmitter;
     }

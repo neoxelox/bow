@@ -26,7 +26,7 @@ namespace device
         receiver->pin->AttachPullResistor(GPIO_PULLDOWN_ONLY);
         receiver->pin->AttachInterrupt(GPIO_INTR_ANYEDGE, receiver->isrFunc, receiver);
 
-        xTaskCreatePinnedToCore(receiver->taskFunc, "ReceiverTask", 4 * 1024, receiver, 10, &receiver->taskHandle, 0);
+        xTaskCreatePinnedToCore(receiver->taskFunc, "Receiver", 4 * 1024, receiver, 10, &receiver->taskHandle, 0);
 
         return receiver;
     }
