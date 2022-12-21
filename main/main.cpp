@@ -5,6 +5,14 @@
 #include "device.hpp"
 #include "status.hpp"
 #include "chron.hpp"
+#include "provisioner.hpp"
+#include "server.hpp"
+
+// TODO: Only for debug, remove
+#include <string.h>
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
+// ----------------------------
 
 namespace main
 {
@@ -19,37 +27,68 @@ namespace main
         device::Transmitter *transmitter;
         status::Controller *status;
         chron::Controller *chron;
+        provisioner::Provisioner *provisioner;
+        server::Server *server;
 
     public:
+        inline static App *Instance;
+
         static App *New()
         {
-            App *app = new App();
+            if (Instance != NULL)
+                return Instance;
+
+            Instance = new App();
 
             int64_t elapsed = esp_timer_get_time();
 
             // Inject dependencies
-            app->description = esp_app_get_description();
-            app->logger = logger::Logger::New((esp_log_level_t)CONFIG_LOG_DEFAULT_LEVEL);
-            app->receiver = device::Receiver::New(app->logger);
-            app->transmitter = device::Transmitter::New(app->logger);
-            app->status = status::Controller::New(app->logger);
-            app->chron = chron::Controller::New(app->logger);
+            Instance->description = esp_app_get_description();
+            Instance->logger = logger::Logger::New((esp_log_level_t)ESP_LOG_DEBUG); // TODO: Only for debug, change to CONFIG_LOG_DEFAULT_LEVEL
+            Instance->provisioner = provisioner::Provisioner::New(Instance->logger);
+            Instance->server = server::Server::New(Instance->logger);
+            Instance->receiver = device::Receiver::New(Instance->logger);
+            Instance->transmitter = device::Transmitter::New(Instance->logger);
+            Instance->status = status::Controller::New(Instance->logger);
+            Instance->chron = chron::Controller::New(Instance->logger);
 
             elapsed = esp_timer_get_time() - elapsed;
-            app->logger->Info(TAG, "Startup took %f ms", (float)(elapsed / 1000.0l));
-            app->logger->Info(TAG, "==================== %s v%s ====================",
-                              app->description->project_name, app->description->version);
+            Instance->logger->Info(TAG, "Startup took %f ms", (float)(elapsed / 1000.0l));
+            Instance->logger->Info(TAG, "==================== %s v%s ====================",
+                                   Instance->description->project_name, Instance->description->version);
 
-            return app;
+            // TODO: Only for debug, remove
+
+            vTaskDelay(5000 / portTICK_PERIOD_MS);
+
+            char taskInfoList[1024];
+            char *taskInfo;
+
+            vTaskList(taskInfoList);
+
+            taskInfo = strtok(taskInfoList, "\n");
+
+            Instance->logger->Debug(TAG, "=====================================================");
+            Instance->logger->Debug(TAG, "Task             State   Prio    Free    Num     Core");
+            Instance->logger->Debug(TAG, "-----------------------------------------------------");
+
+            while (taskInfo != NULL)
+            {
+                Instance->logger->Debug(TAG, "%s", taskInfo);
+                taskInfo = strtok(NULL, "\n");
+            }
+
+            Instance->logger->Debug(TAG, "=====================================================");
+
+            // ----------------------------
+
+            return Instance;
         }
     };
 }
 
-// App dependencies container
-static main::App *app;
-
 extern "C" void app_main(void)
 {
     // Dependencies must be initialized after App main entrypoint
-    app = main::App::New();
+    main::App::New();
 }
