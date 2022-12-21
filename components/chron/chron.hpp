@@ -5,6 +5,7 @@
 #include "freertos/task.h"
 #include "esp_event.h"
 #include "logger.hpp"
+#include "provisioner.hpp"
 
 namespace chron
 {
@@ -19,6 +20,7 @@ namespace chron
     {
     private:
         logger::Logger *logger;
+        provisioner::Provisioner *provisioner;
         i2c_dev_t dev;
         TaskHandle_t taskHandle;
 
@@ -34,7 +36,7 @@ namespace chron
 
     public:
         inline static Controller *Instance;
-        static Controller *New(logger::Logger *logger);
+        static Controller *New(logger::Logger *logger, provisioner::Provisioner *provisioner);
 
     public:
         void Now(struct tm *dst);

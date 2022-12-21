@@ -15,14 +15,16 @@
 
 namespace chron
 {
-    Controller *Controller::New(logger::Logger *logger)
+    Controller *Controller::New(logger::Logger *logger, provisioner::Provisioner *provisioner)
     {
         if (Instance != NULL)
             return Instance;
 
         Instance = new Controller();
 
+        // Inject dependencies
         Instance->logger = logger;
+        Instance->provisioner = provisioner;
 
         // Initialize DS3231 RTC
         ESP_ERROR_CHECK(i2cdev_init());
