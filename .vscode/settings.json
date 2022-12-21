@@ -26,7 +26,15 @@
     "cinttypes": "cpp",
     "cstdint": "cpp",
     "typeinfo": "cpp",
-    "queue.h": "c"
+    "queue.h": "c",
+    "array": "cpp",
+    "string": "cpp",
+    "string_view": "cpp",
+    "esp_httpd_priv.h": "c",
+    "socket.h": "c",
+    "cerrno": "cpp",
+    "chrono": "cpp",
+    "thread": "cpp"
   },
   "idf.port": "/dev/ttyACM0",
   "idf.flashType": "JTAG"
