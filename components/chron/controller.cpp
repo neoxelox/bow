@@ -11,6 +11,7 @@
 #include "lwip/err.h"
 #include "lwip/sys.h"
 #include "logger.hpp"
+#include "provisioner.hpp"
 #include "chron.hpp"
 
 namespace chron
