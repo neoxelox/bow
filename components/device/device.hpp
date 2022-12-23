@@ -6,6 +6,7 @@
 #include "esp_attr.h"
 #include "logger.hpp"
 #include "gpio.hpp"
+#include "status.hpp"
 
 namespace device
 {
@@ -76,6 +77,7 @@ namespace device
     {
     private:
         logger::Logger *logger;
+        status::Controller *status;
         gpio::Digital *pin;
         TaskHandle_t taskHandle;
         QueueHandle_t queue;
@@ -92,15 +94,18 @@ namespace device
         bool decode(const Protocol *protocol);
 
     public:
-        static Receiver *New(logger::Logger *logger);
+        inline static Receiver *Instance;
+        static Receiver *New(logger::Logger *logger, status::Controller *status);
 
-        const Packet *Wait();
+    public:
+        void Wait(Packet *packet);
     };
 
     class Transmitter
     {
     private:
         logger::Logger *logger;
+        status::Controller *status;
         gpio::Digital *pin;
         TaskHandle_t taskHandle;
         QueueHandle_t queue;
@@ -112,8 +117,10 @@ namespace device
         void encode(const Packet *packet, int replays);
 
     public:
-        static Transmitter *New(logger::Logger *logger);
+        inline static Transmitter *Instance;
+        static Transmitter *New(logger::Logger *logger, status::Controller *status);
 
+    public:
         esp_err_t Send(const Packet *packet);
     };
 }

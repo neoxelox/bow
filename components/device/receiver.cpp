@@ -8,34 +8,41 @@
 #include "esp_timer.h"
 #include "logger.hpp"
 #include "gpio.hpp"
+#include "status.hpp"
 #include "device.hpp"
 
 namespace device
 {
-    Receiver *Receiver::New(logger::Logger *logger)
+    Receiver *Receiver::New(logger::Logger *logger, status::Controller *status)
     {
-        Receiver *receiver = new Receiver();
+        if (Instance != NULL)
+            return Instance;
 
-        receiver->logger = logger;
+        Instance = new Receiver();
 
-        receiver->queue = xQueueCreate(QUEUE_SIZE, sizeof(Packet *));
-        if (!receiver->queue)
+        // Inject dependencies
+        Instance->logger = logger;
+        Instance->status = status;
+
+        // Initialize receiver queue
+        Instance->queue = xQueueCreate(QUEUE_SIZE, sizeof(Packet *));
+        if (!Instance->queue)
             ESP_ERROR_CHECK(ESP_ERR_NO_MEM);
 
-        receiver->pin = gpio::Digital::New(GPIO_NUM_17, GPIO_MODE_INPUT);
-        receiver->pin->AttachPullResistor(GPIO_PULLDOWN_ONLY);
-        receiver->pin->AttachInterrupt(GPIO_INTR_ANYEDGE, receiver->isrFunc, receiver);
+        // Initialize receiver
+        Instance->pin = gpio::Digital::New(GPIO_NUM_17, GPIO_MODE_INPUT);
+        Instance->pin->AttachPullResistor(GPIO_PULLDOWN_ONLY);
+        Instance->pin->AttachInterrupt(GPIO_INTR_ANYEDGE, Instance->isrFunc, NULL);
 
-        xTaskCreatePinnedToCore(receiver->taskFunc, "Receiver", 4 * 1024, receiver, 10, &receiver->taskHandle, 0);
+        // Create receiver task
+        xTaskCreatePinnedToCore(Instance->taskFunc, "Receiver", 4 * 1024, NULL, 10, &Instance->taskHandle, 0);
 
-        return receiver;
+        return Instance;
     }
 
-    const Packet *Receiver::Wait()
+    void Receiver::Wait(Packet *packet)
     {
-        Packet *packet;
         xQueueReceive(this->queue, &packet, portMAX_DELAY);
-        return packet;
     }
 
     int diff(int a, int b)
@@ -45,60 +52,58 @@ namespace device
 
     void IRAM_ATTR Receiver::isrFunc(void *args)
     {
-        Receiver *This = (Receiver *)args;
-
         int64_t isrCurrentTime = esp_timer_get_time();
 
-        uint32_t isrPulseWidth = isrCurrentTime - This->isrLastTime;
+        uint32_t isrPulseWidth = isrCurrentTime - Instance->isrLastTime;
 
         // Ignore short pulses which can be noise and may split actual pulses
         if (isrPulseWidth < MIN_PULSE_WIDTH)
         {
-            This->isrLastTime = This->isrLastLastTime;
+            Instance->isrLastTime = Instance->isrLastLastTime;
 
-            if (This->isrIndex > 0)
-                This->isrIndex--;
+            if (Instance->isrIndex > 0)
+                Instance->isrIndex--;
 
             return;
         }
 
         // Advance times
-        This->isrLastLastTime = This->isrLastTime;
-        This->isrLastTime = isrCurrentTime;
+        Instance->isrLastLastTime = Instance->isrLastTime;
+        Instance->isrLastTime = isrCurrentTime;
 
         // Long pulses can be the start or end of a data packet
         if (isrPulseWidth >= MIN_SYNC_PULSE_WIDTH)
         {
             // We weren't receiving the packet so it's the start
-            if (!This->isrIsReceivingData)
+            if (!Instance->isrIsReceivingData)
             {
-                This->isrIsReceivingData = true;
-                This->isrIndex = 0;
+                Instance->isrIsReceivingData = true;
+                Instance->isrIndex = 0;
             }
             // We were receiving the packet so it's the end
             else
             {
-                int isrPulseDifference = diff(This->isrBuffer[0], isrPulseWidth);
+                int isrPulseDifference = diff(Instance->isrBuffer[0], isrPulseWidth);
 
                 // If both pulses differ to much its not the actual end
                 if (abs(isrPulseDifference) > PULSE_WIDTH_TOLERANCE)
                 {
                     // If current pulse is greater maybe its a new packet
                     if (isrPulseDifference > 0)
-                        This->isrIndex = 0;
+                        Instance->isrIndex = 0;
                     // Otherwise ignore as it could be a second sync or the space between the preamble and data
                 }
                 // Pulses are similar, it could indeed be a packet
                 else
                 {
                     // Ignore small packets which can be noise
-                    if ((This->isrIndex - 2) >= MIN_DATA_PULSES)
+                    if ((Instance->isrIndex - 2) >= MIN_DATA_PULSES)
                     {
                         uint8_t protocolID;
 
                         // Try to decode the packet with all known protocols
                         for (protocolID = 0; protocolID < NUM_PROTOCOLS; protocolID++)
-                            if (This->decode(&PROTOCOLS[protocolID]))
+                            if (Instance->decode(&PROTOCOLS[protocolID]))
                                 break;
 
                         // The packet has been successfully decoded
@@ -106,26 +111,26 @@ namespace device
                         {
                             // Publish packet to the queue
                             Packet *packet = new Packet{++protocolID};
-                            memcpy(packet->Data, This->isrData, MAX_DATA_PULSES + 1);
-                            xQueueSendFromISR(This->queue, &packet, NULL);
+                            memcpy(packet->Data, Instance->isrData, MAX_DATA_PULSES + 1);
+                            xQueueSendFromISR(Instance->queue, &packet, NULL);
                         }
                     }
 
-                    This->isrIsReceivingData = false;
+                    Instance->isrIsReceivingData = false;
                 }
             }
         }
 
         // Save pulse into the buffer if we are receiving a packet
-        if (This->isrIsReceivingData)
+        if (Instance->isrIsReceivingData)
         {
-            This->isrBuffer[This->isrIndex] = isrPulseWidth;
+            Instance->isrBuffer[Instance->isrIndex] = isrPulseWidth;
 
             // Avoid buffer overflow
-            if (This->isrIndex >= (BUFFER_SIZE - 1))
-                This->isrIndex = 0;
+            if (Instance->isrIndex >= (BUFFER_SIZE - 1))
+                Instance->isrIndex = 0;
             else
-                This->isrIndex++;
+                Instance->isrIndex++;
         }
     }
 
@@ -206,17 +211,17 @@ namespace device
         return true;
     }
 
-    // TODO: makes sense having this task?
+    // TODO: makes sense having this task -> no, the packet is even deleted -> care!
     void Receiver::taskFunc(void *args)
     {
-        Receiver *This = (Receiver *)args;
-
         Packet *packet;
 
         while (1)
         {
-            xQueueReceive(This->queue, &packet, portMAX_DELAY);
-            This->logger->Debug(TAG, "Rx | Data: %s | Protocol: %d", packet->Data, packet->ProtocolID);
+            xQueueReceive(Instance->queue, &packet, portMAX_DELAY);
+
+            Instance->logger->Debug(TAG, "Rx | Data: %s | Protocol: %d", packet->Data, packet->ProtocolID);
+            Instance->status->SetStatus(status::Statuses::Received);
 
             delete packet;
         }

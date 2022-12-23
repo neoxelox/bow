@@ -5,50 +5,60 @@
 #include "esp_rom_sys.h"
 #include "logger.hpp"
 #include "gpio.hpp"
+#include "status.hpp"
 #include "device.hpp"
 
 namespace device
 {
-    Transmitter *Transmitter::New(logger::Logger *logger)
+    Transmitter *Transmitter::New(logger::Logger *logger, status::Controller *status)
     {
-        Transmitter *transmitter = new Transmitter();
+        if (Instance != NULL)
+            return Instance;
 
-        transmitter->logger = logger;
+        Instance = new Transmitter();
 
-        transmitter->queue = xQueueCreate(QUEUE_SIZE, sizeof(Packet *));
-        if (!transmitter->queue)
+        // Inject dependencies
+        Instance->logger = logger;
+        Instance->status = status;
+
+        // Initialize transmitter queue
+        Instance->queue = xQueueCreate(QUEUE_SIZE, sizeof(Packet *));
+        if (!Instance->queue)
             ESP_ERROR_CHECK(ESP_ERR_NO_MEM);
 
-        transmitter->pin = gpio::Digital::New(GPIO_NUM_38, GPIO_MODE_OUTPUT);
-        transmitter->pin->AttachPullResistor(GPIO_PULLDOWN_ONLY);
+        // Initialize transmitter
+        Instance->pin = gpio::Digital::New(GPIO_NUM_38, GPIO_MODE_OUTPUT);
+        Instance->pin->AttachPullResistor(GPIO_PULLDOWN_ONLY);
+        Instance->pin->SetLevel(gpio::LOW);
 
-        transmitter->lock = portMUX_INITIALIZER_UNLOCKED;
+        Instance->lock = portMUX_INITIALIZER_UNLOCKED;
 
-        xTaskCreatePinnedToCore(transmitter->taskFunc, "Transmitter", 4 * 1024, transmitter, 10, &transmitter->taskHandle, 1);
+        // Create transmitter task
+        xTaskCreatePinnedToCore(Instance->taskFunc, "Transmitter", 4 * 1024, NULL, 10, &Instance->taskHandle, 1);
 
-        return transmitter;
+        return Instance;
     }
 
     esp_err_t Transmitter::Send(const Packet *packet)
     {
         if (xQueueSend(this->queue, &packet, 0) == errQUEUE_FULL)
-            return ESP_FAIL;
+            return ESP_ERR_NO_MEM;
 
         return ESP_OK;
     }
 
     void Transmitter::taskFunc(void *args)
     {
-        Transmitter *This = (Transmitter *)args;
-
         Packet *packet;
 
         while (1)
         {
-            xQueueReceive(This->queue, &packet, portMAX_DELAY);
-            This->logger->Debug(TAG, "Tx | Data: %s | Protocol: %d", packet->Data, packet->ProtocolID);
+            xQueueReceive(Instance->queue, &packet, portMAX_DELAY);
 
-            This->encode(packet, 3);
+            Instance->encode(packet, 3);
+
+            Instance->logger->Debug(TAG, "Tx | Data: %s | Protocol: %d", packet->Data, packet->ProtocolID);
+            Instance->status->SetStatus(status::Statuses::Transmitted);
 
             delete packet;
         }
