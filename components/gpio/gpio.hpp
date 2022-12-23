@@ -25,6 +25,7 @@ namespace gpio
     public:
         static Digital *New(gpio_num_t pin, gpio_mode_t mode);
 
+    public:
         void SetLevel(uint32_t level);
         uint32_t GetLevel();
         void AttachPullResistor(gpio_pull_mode_t pull);
@@ -44,6 +45,7 @@ namespace gpio
     public:
         static Analog *New(gpio_num_t pin, gpio_mode_t mode, ledc_timer_t timer, ledc_timer_bit_t res, uint32_t freq);
 
+    public:
         void SetLevel(uint32_t level);
     };
 }
