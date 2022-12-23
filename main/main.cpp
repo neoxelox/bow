@@ -45,12 +45,12 @@ namespace main
             // Inject dependencies
             Instance->description = esp_app_get_description();
             Instance->logger = logger::Logger::New((esp_log_level_t)ESP_LOG_DEBUG); // TODO: Only for debug, change to CONFIG_LOG_DEFAULT_LEVEL
-            Instance->provisioner = provisioner::Provisioner::New(Instance->logger);
-            Instance->chron = chron::Controller::New(Instance->logger, Instance->provisioner);
-            Instance->server = server::Server::New(Instance->logger);
-            Instance->receiver = device::Receiver::New(Instance->logger);
-            Instance->transmitter = device::Transmitter::New(Instance->logger);
             Instance->status = status::Controller::New(Instance->logger);
+            Instance->provisioner = provisioner::Provisioner::New(Instance->logger, Instance->status);
+            Instance->chron = chron::Controller::New(Instance->logger, Instance->provisioner);
+            Instance->server = server::Server::New(Instance->logger, Instance->provisioner);
+            Instance->receiver = device::Receiver::New(Instance->logger, Instance->status);
+            Instance->transmitter = device::Transmitter::New(Instance->logger, Instance->status);
 
             elapsed = esp_timer_get_time() - elapsed;
             Instance->logger->Info(TAG, "Startup took %f ms", (float)(elapsed / 1000.0l));
