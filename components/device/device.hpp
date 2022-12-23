@@ -121,6 +121,6 @@ namespace device
         static Transmitter *New(logger::Logger *logger, status::Controller *status);
 
     public:
-        esp_err_t Send(const Packet *packet);
+        esp_err_t Send(Packet *packet);
     };
 }

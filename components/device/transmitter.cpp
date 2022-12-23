@@ -39,7 +39,7 @@ namespace device
         return Instance;
     }
 
-    esp_err_t Transmitter::Send(const Packet *packet)
+    esp_err_t Transmitter::Send(Packet *packet)
     {
         if (xQueueSend(this->queue, &packet, 0) == errQUEUE_FULL)
             return ESP_ERR_NO_MEM;
