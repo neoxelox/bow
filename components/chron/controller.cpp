@@ -77,6 +77,9 @@ namespace chron
 
     void Controller::start()
     {
+        if (sntp_enabled())
+            return;
+
         // Configure NTP sync
         sntp_set_time_sync_notification_cb(this->ntpFunc);
         sntp_set_sync_interval(SYNC_PERIOD_NTP);
@@ -92,6 +95,9 @@ namespace chron
 
     void Controller::stop()
     {
+        if (!sntp_enabled())
+            return;
+
         // Stop NTP sync
         sntp_stop();
 
