@@ -1,0 +1,14 @@
+# ESP-IDF Partition Table
+# NOTE: If the offset field is empty it will be automatically inferred
+# NOTE: Updating the partition table doesn’t erase previous data
+# NOTE: ESP-IDF does not support a total partitions size >16MB yet
+# Name,      Type,    SubType,    Offset,     Size,   Flags
+nvs,         data,    nvs,        ,           16K,
+ota_data,    data,    ota,        ,           8K,
+phy_init,    data,    phy,        ,           4K,
+nvs_keys,    data,    nvs_keys,   ,           4K,
+database,    data,    nvs,        ,           5M,
+static,      data,    fat,        ,           5M,
+factory,     app,     factory,    ,           5M,
+# TODO: Add OTA partitions
+# TODO: Add encryption flags

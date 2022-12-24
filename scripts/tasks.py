@@ -33,3 +33,15 @@ def plot(context, port="/dev/ttyACM0", baud=115200, length=100, match="\{(.*?)\}
         pyplot.show()
     finally:
         plotter.close()
+
+
+@task()
+def erase(context, yes=False):
+    "Erase the entire flash contents."
+
+    context.print(f"The entire flash contents will be [bold red1]erased[/bold red1]")
+
+    if not yes and context.input("Continue? y/N: ").lower() != "y":
+        context.exit()
+
+    context.run(f"{Tools.Idf} erase-flash")

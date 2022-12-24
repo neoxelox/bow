@@ -85,6 +85,7 @@ namespace server
         // - Tasks info
         // - Resource info
         // - Time info
+        // - Storage info (FATFS/NVS)
 
         // TODO: logger middleware
 

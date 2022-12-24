@@ -22,8 +22,17 @@ namespace provisioner
         Instance->logger = logger;
         Instance->status = status;
 
+        // Initialize Wi-Fi NVS partition
+        esp_err_t err = nvs_flash_init();
+        // Wi-Fi NVS partition has been truncated or format cannot be recognized
+        if (err == ESP_ERR_NVS_NO_FREE_PAGES || err == ESP_ERR_NVS_NEW_VERSION_FOUND)
+        {
+            ESP_ERROR_CHECK(nvs_flash_erase());
+            err = nvs_flash_init();
+        }
+        ESP_ERROR_CHECK(err);
+
         // Initialize Wi-Fi in station mode, LwIP and default event loop
-        ESP_ERROR_CHECK(nvs_flash_init());
         ESP_ERROR_CHECK(esp_netif_init());
         ESP_ERROR_CHECK(esp_event_loop_create_default());
         esp_netif_create_default_wifi_sta();
@@ -39,7 +48,7 @@ namespace provisioner
         // Configure Wi-Fi in station mode
         wifi_config_t wifiCfg = {
             .sta = {
-                .ssid = "",             // TODO: Only for debug, make SoftAp provisioning scheme
+                .ssid = "",        // TODO: Only for debug, make SoftAp provisioning scheme
                 .password = "",   // TODO: Only for debug, make SoftAp provisioning scheme
                 .scan_method = WIFI_FAST_SCAN, // Scan until the first matched AP is found
                 .channel = NULL,               // Scan on all channels

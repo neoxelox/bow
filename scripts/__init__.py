@@ -26,3 +26,4 @@ root.configure({
 
 root.add_task(tasks.lint)
 root.add_task(tasks.plot)
+root.add_task(tasks.erase)

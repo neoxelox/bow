@@ -17,3 +17,10 @@ class Tools(superinvoke.Tools):
         tags=[Tags.DEV, Tags.CI],
         path="cppcheck",
     )
+
+    Idf = superinvoke.Tool(
+        name="esp-idf",
+        version="5.0-beta1-641-gc321739074",
+        tags=[*Tags.As("*")],
+        path="idf.py",
+    )
