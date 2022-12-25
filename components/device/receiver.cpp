@@ -40,9 +40,10 @@ namespace device
         return Instance;
     }
 
-    void Receiver::Wait(Packet *packet)
+    void Receiver::Wait(Packet **packet)
     {
-        xQueueReceive(this->queue, &packet, portMAX_DELAY);
+        // TODO: Make other system to receive packets with multiple consumers, this will fail!
+        xQueueReceive(this->queue, packet, portMAX_DELAY);
     }
 
     int diff(int a, int b)

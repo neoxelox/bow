@@ -99,7 +99,7 @@ namespace device
         static Receiver *New(logger::Logger *logger, status::Controller *status);
 
     public:
-        void Wait(Packet *packet);
+        void Wait(Packet **packet);
     };
 
     class Transmitter
