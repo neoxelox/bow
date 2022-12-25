@@ -15,7 +15,7 @@ namespace device
     static const int MAX_SYNC_PULSES = 4;      // Max PROTOCOLS(Sync) * 2 (extra end sync)
     static const int MAX_PREAMBLE_PULSES = 24; // Max PROTOCOLS(Preamble)
     static const int MAX_DATA_PULSES = 130;    // Max PROTOCOLS(Data): 65 (x2) bits
-    static const int MIN_DATA_PULSES = 16;     // Min PROTOCOLS(Data): 8 (x2) bits
+    static const int MIN_DATA_PULSES = 64;     // Min PROTOCOLS(Data): 32 (x2) bits
     static const int MAX_DATA_ZERO_PULSES = 2; // Max PROTOCOLS(Data.Zero)
     static const int MAX_DATA_ONE_PULSES = 2;  // Max PROTOCOLS(Data.One)
 
@@ -49,6 +49,7 @@ namespace device
         {400, {1, 42}, {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 10}, {{1, 2}, {2, 1}}}, // Master Otello Blinds
         {300, {1, 34}, {}, {{1, 3}, {3, 1}}},                                                                        // SatChef Socket
         {450, {1, 29}, {}, {{1, 3}, {3, 1}}},                                                                        // Splenssy Alarm
+        {360, {1, 25}, {13, 4}, {{1, 2}, {2, 1}}},                                                                   // Sublimex Blinds
         // https://github.com/sui77/rc-switch/blob/436a74b03f3dc17a29ee327af29d5a05d77f94b9/RCSwitch.cpp#L82
         {350, {1, 31}, {}, {{1, 3}, {3, 1}}},    // Common ten pole DIP switch
         {650, {1, 10}, {}, {{1, 2}, {2, 1}}},    // Common two rotary/sliding switch

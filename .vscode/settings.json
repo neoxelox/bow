@@ -34,7 +34,14 @@
     "socket.h": "c",
     "cerrno": "cpp",
     "chrono": "cpp",
-    "thread": "cpp"
+    "thread": "cpp",
+    "bitset": "cpp",
+    "regex": "cpp",
+    "ratio": "cpp",
+    "system_error": "cpp",
+    "functional": "cpp",
+    "tuple": "cpp",
+    "memory_resource": "c"
   },
   "idf.port": "/dev/ttyACM0",
   "idf.flashType": "JTAG"
