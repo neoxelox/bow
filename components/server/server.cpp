@@ -1,4 +1,5 @@
 #include <errno.h>
+#include <string.h>
 #include "esp_err.h"
 #include "esp_wifi.h"
 #include "esp_event.h"
@@ -8,6 +9,7 @@
 #include "esp_http_server.h"
 #include "http_parser.h"
 #include "cJSON.h"
+#include "esp_vfs_fat.h"
 #include "logger.hpp"
 #include "provisioner.hpp"
 #include "server.hpp"
@@ -35,6 +37,14 @@ namespace server
         ESP_ERROR_CHECK(esp_event_handler_instance_register(
             IP_EVENT, IP_EVENT_STA_LOST_IP, Instance->ipFunc, NULL, NULL));
 
+        // Mount FAT filesystem from static partition
+        esp_vfs_fat_mount_config_t cfg = {
+            .format_if_mount_failed = false,
+            .max_files = MAX_CLIENTS,
+            .allocation_unit_size = CONFIG_WL_SECTOR_SIZE,
+        };
+        ESP_ERROR_CHECK(esp_vfs_fat_spiflash_mount_rw_wl(ROOT, PARTITION, &cfg, &Instance->fsHandle));
+
         return Instance;
     }
 
@@ -48,9 +58,9 @@ namespace server
             .task_priority = 9,
             .stack_size = 4 * 1024,
             .core_id = tskNO_AFFINITY,
-            .server_port = 80,
+            .server_port = PORT,
             .ctrl_port = 32768,
-            .max_open_sockets = 5,
+            .max_open_sockets = MAX_CLIENTS,
             .max_uri_handlers = 5,
             .max_resp_headers = 10,
             .backlog_conn = 5,
@@ -64,38 +74,26 @@ namespace server
         ESP_ERROR_CHECK(httpd_start(&this->espServer, &cfg));
 
         // Register error handlers, note that there is no way to register all at the same time
-        ESP_ERROR_CHECK(httpd_register_err_handler(this->espServer, HTTPD_400_BAD_REQUEST, this->errHandler));
-        ESP_ERROR_CHECK(httpd_register_err_handler(this->espServer, HTTPD_401_UNAUTHORIZED, this->errHandler));
-        ESP_ERROR_CHECK(httpd_register_err_handler(this->espServer, HTTPD_403_FORBIDDEN, this->errHandler));
-        ESP_ERROR_CHECK(httpd_register_err_handler(this->espServer, HTTPD_404_NOT_FOUND, this->errHandler));
-        ESP_ERROR_CHECK(httpd_register_err_handler(this->espServer, HTTPD_405_METHOD_NOT_ALLOWED, this->errHandler));
-        ESP_ERROR_CHECK(httpd_register_err_handler(this->espServer, HTTPD_408_REQ_TIMEOUT, this->errHandler));
-        ESP_ERROR_CHECK(httpd_register_err_handler(this->espServer, HTTPD_411_LENGTH_REQUIRED, this->errHandler));
-        ESP_ERROR_CHECK(httpd_register_err_handler(this->espServer, HTTPD_414_URI_TOO_LONG, this->errHandler));
-        ESP_ERROR_CHECK(httpd_register_err_handler(this->espServer, HTTPD_431_REQ_HDR_FIELDS_TOO_LARGE, this->errHandler));
-        ESP_ERROR_CHECK(httpd_register_err_handler(this->espServer, HTTPD_500_INTERNAL_SERVER_ERROR, this->errHandler));
-        ESP_ERROR_CHECK(httpd_register_err_handler(this->espServer, HTTPD_501_METHOD_NOT_IMPLEMENTED, this->errHandler));
-        ESP_ERROR_CHECK(httpd_register_err_handler(this->espServer, HTTPD_505_VERSION_NOT_SUPPORTED, this->errHandler));
-
-        // Register HTTP handlers // TODO: Move it somehow to the hpp?
-
-        // TODO: And endpoint that gives you:
-        // - Chip info
-        // - Firmware info
-        // - Tasks info
-        // - Resource info
-        // - Time info
-        // - Storage info (FATFS/NVS)
+        ESP_ERROR_CHECK(httpd_register_err_handler(this->espServer, HTTPD_400_BAD_REQUEST, this->errorHandler));
+        ESP_ERROR_CHECK(httpd_register_err_handler(this->espServer, HTTPD_401_UNAUTHORIZED, this->errorHandler));
+        ESP_ERROR_CHECK(httpd_register_err_handler(this->espServer, HTTPD_403_FORBIDDEN, this->errorHandler));
+        ESP_ERROR_CHECK(httpd_register_err_handler(this->espServer, HTTPD_404_NOT_FOUND, this->errorHandler));
+        ESP_ERROR_CHECK(httpd_register_err_handler(this->espServer, HTTPD_405_METHOD_NOT_ALLOWED, this->errorHandler));
+        ESP_ERROR_CHECK(httpd_register_err_handler(this->espServer, HTTPD_408_REQ_TIMEOUT, this->errorHandler));
+        ESP_ERROR_CHECK(httpd_register_err_handler(this->espServer, HTTPD_411_LENGTH_REQUIRED, this->errorHandler));
+        ESP_ERROR_CHECK(httpd_register_err_handler(this->espServer, HTTPD_414_URI_TOO_LONG, this->errorHandler));
+        ESP_ERROR_CHECK(httpd_register_err_handler(this->espServer, HTTPD_431_REQ_HDR_FIELDS_TOO_LARGE, this->errorHandler));
+        ESP_ERROR_CHECK(httpd_register_err_handler(this->espServer, HTTPD_500_INTERNAL_SERVER_ERROR, this->errorHandler));
+        ESP_ERROR_CHECK(httpd_register_err_handler(this->espServer, HTTPD_501_METHOD_NOT_IMPLEMENTED, this->errorHandler));
+        ESP_ERROR_CHECK(httpd_register_err_handler(this->espServer, HTTPD_505_VERSION_NOT_SUPPORTED, this->errorHandler));
 
         // TODO: logger middleware
 
-        httpd_uri_t getURIHandler = {
-            .uri = "/",
-            .method = HTTP_GET,
-            .handler = this->getHandler,
-        };
+        // Register api handlers
+        ESP_ERROR_CHECK(httpd_register_uri_handler(this->espServer, &this->apiGetInfoURIHandler));
 
-        ESP_ERROR_CHECK(httpd_register_uri_handler(this->espServer, &getURIHandler));
+        // Register frontend handler, note that it has to be the last one to catch all other URLs
+        ESP_ERROR_CHECK(httpd_register_uri_handler(this->espServer, &this->frontURIHandler));
 
         this->logger->Debug(TAG, "Started HTTP server on port :%d", cfg.server_port);
     }
@@ -111,6 +109,46 @@ namespace server
         this->espServer = NULL;
 
         this->logger->Debug(TAG, "Stopped HTTP server");
+    }
+
+    esp_err_t Server::serveFile(httpd_req_t *request, const char *path)
+    {
+        // Open file
+        FILE *file = fopen(path, "r");
+        if (file == NULL)
+        {
+            httpd_resp_send_err(request, HTTPD_500_INTERNAL_SERVER_ERROR, NULL);
+            return ESP_FAIL;
+        }
+
+        // Read and send file in chunks
+        char chunk[1024];
+        size_t size;
+        do
+        {
+            size = fread(chunk, 1, sizeof(chunk), file);
+            if (httpd_resp_send_chunk(request, chunk, size) != ESP_OK)
+            {
+                // Close file
+                fclose(file);
+
+                // Abort sending file
+                httpd_resp_send_chunk(request, NULL, 0);
+                httpd_resp_send_err(request, HTTPD_500_INTERNAL_SERVER_ERROR, NULL);
+
+                return ESP_FAIL;
+            }
+        } while (size != 0);
+
+        // Close file
+        fclose(file);
+
+        // Close connection for large responses to free the underlying socket instantly
+        httpd_resp_set_hdr(request, Headers::Connection, "close");
+        // Respond with an empty chunk to signal HTTP response completion
+        httpd_resp_send_chunk(request, NULL, 0);
+
+        return ESP_OK;
     }
 
     void Server::wifiFunc(void *args, esp_event_base_t base, int32_t id, void *data)
@@ -131,7 +169,7 @@ namespace server
             Instance->stop();
     }
 
-    esp_err_t Server::errHandler(httpd_req_t *request, httpd_err_code_t error)
+    esp_err_t Server::errorHandler(httpd_req_t *request, httpd_err_code_t error)
     {
         const char *status;
         cJSON *root = cJSON_CreateObject();
@@ -139,18 +177,18 @@ namespace server
         switch (error)
         {
         case HTTPD_400_BAD_REQUEST:
-            status = HTTPD_400;
-            cJSON_AddStringToObject(root, "code", "ERR_INVALID_REQUEST");
+            status = Statuses::_400;
+            cJSON_AddStringToObject(root, "code", Errors::InvalidRequest);
             break;
 
         case HTTPD_404_NOT_FOUND:
-            status = HTTPD_404;
-            cJSON_AddStringToObject(root, "code", "ERR_NOT_FOUND");
+            status = Statuses::_404;
+            cJSON_AddStringToObject(root, "code", Errors::NotFound);
             break;
 
         default:
-            status = HTTPD_500;
-            cJSON_AddStringToObject(root, "code", "ERR_SERVER_GENERIC");
+            status = Statuses::_500;
+            cJSON_AddStringToObject(root, "code", Errors::ServerGeneric);
             break;
         }
 
@@ -158,7 +196,7 @@ namespace server
 
         // TODO: Set required headers with httpd_resp_set_hdr
         ESP_ERROR_CHECK(httpd_resp_set_status(request, status));
-        ESP_ERROR_CHECK(httpd_resp_set_type(request, HTTPD_TYPE_JSON));
+        ESP_ERROR_CHECK(httpd_resp_set_type(request, ContentTypes::ApplicationJSON));
 
         // Framework-necessary code
 #ifdef CONFIG_HTTPD_ERR_RESP_NO_DELAY
@@ -194,16 +232,49 @@ namespace server
         return ESP_FAIL;
     }
 
-    esp_err_t Server::getHandler(httpd_req_t *request)
+    esp_err_t Server::frontHandler(httpd_req_t *request)
+    {
+        // On home path serve the Gzipped frontend from FATFS static partition
+        if (!strcmp(request->uri, "/") || !strcmp(request->uri, ""))
+        {
+            // Set Cache Control header so clients load the frontend faster
+            ESP_ERROR_CHECK(httpd_resp_set_hdr(request, Headers::CacheControl, "max-age=604800, stale-while-revalidate=86400, stale-if-error=86400"));
+            ESP_ERROR_CHECK(httpd_resp_set_hdr(request, Headers::ContentEncoding, ContentEncodings::GZIP));
+            ESP_ERROR_CHECK(httpd_resp_set_status(request, Statuses::_200));
+            ESP_ERROR_CHECK(httpd_resp_set_type(request, ContentTypes::TextHTML));
+            ESP_ERROR_CHECK(Instance->serveFile(request, FRONTEND));
+
+            return ESP_OK;
+        }
+
+        // Otherwise redirect to the frontend hash-based navigation: /#/:URI
+        char location[strlen(request->uri) + 2];
+        strcpy(location, "/#");
+
+        ESP_ERROR_CHECK(httpd_resp_set_hdr(request, Headers::Location, strcat(location, request->uri)));
+        ESP_ERROR_CHECK(httpd_resp_set_status(request, Statuses::_301));
+        ESP_ERROR_CHECK(httpd_resp_send(request, NULL, 0));
+
+        return ESP_OK;
+    }
+
+    esp_err_t Server::apiGetInfoHandler(httpd_req_t *request)
     {
         cJSON *root = cJSON_CreateObject();
-        cJSON_AddStringToObject(root, "message", "Hello World!");
-        const char *body = cJSON_PrintUnformatted(root);
+        cJSON_AddStringToObject(root, "chip", "esp32-s3");
 
+        // TODO: And endpoint that gives you:
+        // - Chip info
+        // - Firmware info
+        // - Tasks info
+        // - Resource info
+        // - Time info
+        // - Storage info (FATFS/NVS)
+
+        const char *body = cJSON_PrintUnformatted(root);
         // TODO: Set required headers with httpd_resp_set_hdr
-        // TODO: NOTE: FOR WEB DASHBOARD: Cache-Control: max-age=604800, stale-while-revalidate=86400, tale-if-error=86400
-        ESP_ERROR_CHECK(httpd_resp_set_status(request, HTTPD_200));
-        ESP_ERROR_CHECK(httpd_resp_set_type(request, HTTPD_TYPE_JSON));
+        ESP_ERROR_CHECK(httpd_resp_set_status(request, Statuses::_200));
+        ESP_ERROR_CHECK(httpd_resp_set_type(request, ContentTypes::ApplicationJSON));
         ESP_ERROR_CHECK(httpd_resp_send(request, body, HTTPD_RESP_USE_STRLEN));
 
         free((void *)body);
