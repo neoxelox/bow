@@ -7,6 +7,7 @@
 #include "chron.hpp"
 #include "provisioner.hpp"
 #include "server.hpp"
+#include "database.hpp"
 
 // TODO: Only for debug, remove
 #include <string.h>
@@ -23,6 +24,7 @@ namespace main
     private:
         const esp_app_desc_t *description;
         logger::Logger *logger;
+        database::Database *database;
         device::Receiver *receiver;
         device::Transmitter *transmitter;
         status::Controller *status;
@@ -46,6 +48,7 @@ namespace main
             Instance->description = esp_app_get_description();
             Instance->logger = logger::Logger::New((esp_log_level_t)ESP_LOG_DEBUG); // TODO: Only for debug, change to CONFIG_LOG_DEFAULT_LEVEL
             Instance->status = status::Controller::New(Instance->logger);
+            Instance->database = database::Database::New(Instance->logger);
             Instance->provisioner = provisioner::Provisioner::New(Instance->logger, Instance->status);
             Instance->chron = chron::Controller::New(Instance->logger, Instance->provisioner);
             Instance->server = server::Server::New(Instance->logger, Instance->provisioner);
