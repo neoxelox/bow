@@ -13,6 +13,26 @@ namespace database
 
     typedef bool (*db_find_cb_t)(const char *key, void *context);
 
+    // Database class forward declaration
+    class Database;
+
+    class Handle
+    {
+    private:
+        nvs_handle_t handle;
+        const char *nmspace;
+
+    public:
+        esp_err_t Drop();
+        esp_err_t Count(uint32_t *count);
+        esp_err_t Get(const char *key, cJSON **value);
+        esp_err_t Set(const char *key, cJSON *value);
+        esp_err_t Find(db_find_cb_t find, void *context);
+        esp_err_t Delete(const char *key);
+
+        friend class Database;
+    };
+
     class Database
     {
     private:
@@ -24,12 +44,6 @@ namespace database
 
     public:
         void Info(nvs_stats_t *info);
-        esp_err_t Open(nvs_handle_t *handle, const char *nmspace);
-        esp_err_t Drop(nvs_handle_t handle);
-        esp_err_t Count(nvs_handle_t handle, uint32_t *count);
-        esp_err_t Get(nvs_handle_t handle, const char *key, cJSON **value);
-        esp_err_t Set(nvs_handle_t handle, const char *key, cJSON *value);
-        esp_err_t Find(const char *nmspace, db_find_cb_t find, void *context);
-        esp_err_t Delete(nvs_handle_t handle, const char *key);
+        Handle *Open(const char *nmspace);
     };
 }

@@ -40,37 +40,37 @@ namespace database
         ESP_ERROR_CHECK(nvs_get_stats(PARTITION, info));
     }
 
-    esp_err_t Database::Open(nvs_handle_t *handle, const char *nmspace)
+    Handle *Database::Open(const char *nmspace)
+    {
+        Handle *handle = new Handle();
+
+        handle->nmspace = nmspace;
+
+        ESP_ERROR_CHECK(nvs_open_from_partition(PARTITION, handle->nmspace, NVS_READWRITE, &handle->handle));
+
+        return handle;
+    }
+
+    esp_err_t Handle::Drop()
     {
         esp_err_t err;
 
-        err = nvs_open_from_partition(PARTITION, nmspace, NVS_READWRITE, handle);
+        err = nvs_erase_all(this->handle);
+        if (err != ESP_OK)
+            return err;
+
+        err = nvs_commit(this->handle);
         if (err != ESP_OK)
             return err;
 
         return ESP_OK;
     }
 
-    esp_err_t Database::Drop(nvs_handle_t handle)
+    esp_err_t Handle::Count(uint32_t *count)
     {
         esp_err_t err;
 
-        err = nvs_erase_all(handle);
-        if (err != ESP_OK)
-            return err;
-
-        err = nvs_commit(handle);
-        if (err != ESP_OK)
-            return err;
-
-        return ESP_OK;
-    }
-
-    esp_err_t Database::Count(nvs_handle_t handle, uint32_t *count)
-    {
-        esp_err_t err;
-
-        err = nvs_get_used_entry_count(handle, (size_t *)count);
+        err = nvs_get_used_entry_count(this->handle, (size_t *)count);
         if (err != ESP_OK)
             return err;
 
@@ -80,13 +80,13 @@ namespace database
         return ESP_OK;
     }
 
-    esp_err_t Database::Get(nvs_handle_t handle, const char *key, cJSON **value)
+    esp_err_t Handle::Get(const char *key, cJSON **value)
     {
         esp_err_t err;
 
         uint32_t size;
 
-        err = nvs_get_str(handle, key, NULL, (size_t *)&size);
+        err = nvs_get_str(this->handle, key, NULL, (size_t *)&size);
         if (err == ESP_ERR_NVS_NOT_FOUND)
             return ESP_OK;
         else if (err != ESP_OK)
@@ -94,7 +94,7 @@ namespace database
 
         char *item = (char *)malloc(size);
 
-        err = nvs_get_str(handle, key, item, (size_t *)&size);
+        err = nvs_get_str(this->handle, key, item, (size_t *)&size);
         if (err != ESP_OK)
         {
             free((void *)item);
@@ -110,20 +110,20 @@ namespace database
         return ESP_OK;
     }
 
-    esp_err_t Database::Set(nvs_handle_t handle, const char *key, cJSON *value)
+    esp_err_t Handle::Set(const char *key, cJSON *value)
     {
         esp_err_t err;
 
         const char *item = cJSON_PrintUnformatted(value);
 
-        err = nvs_set_str(handle, key, item);
+        err = nvs_set_str(this->handle, key, item);
         if (err != ESP_OK)
         {
             free((void *)item);
             return err;
         }
 
-        err = nvs_commit(handle);
+        err = nvs_commit(this->handle);
         if (err != ESP_OK)
         {
             free((void *)item);
@@ -135,14 +135,14 @@ namespace database
         return ESP_OK;
     }
 
-    esp_err_t Database::Find(const char *nmspace, db_find_cb_t find, void *context)
+    esp_err_t Handle::Find(db_find_cb_t find, void *context)
     {
         esp_err_t err;
 
         nvs_entry_info_t itemInfo;
         nvs_iterator_t iter = NULL;
 
-        err = nvs_entry_find(PARTITION, nmspace, NVS_TYPE_STR, &iter);
+        err = nvs_entry_find(PARTITION, this->nmspace, NVS_TYPE_STR, &iter);
         if (err == ESP_ERR_NVS_NOT_FOUND)
             return ESP_OK;
         else if (err != ESP_OK)
@@ -163,17 +163,17 @@ namespace database
         return ESP_OK;
     }
 
-    esp_err_t Database::Delete(nvs_handle_t handle, const char *key)
+    esp_err_t Handle::Delete(const char *key)
     {
         esp_err_t err;
 
-        err = nvs_erase_key(handle, key);
+        err = nvs_erase_key(this->handle, key);
         if (err == ESP_ERR_NVS_NOT_FOUND)
             return ESP_OK;
         else if (err != ESP_OK)
             return err;
 
-        err = nvs_commit(handle);
+        err = nvs_commit(this->handle);
         if (err != ESP_OK)
             return err;
 
