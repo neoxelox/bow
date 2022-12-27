@@ -36,14 +36,14 @@ namespace provisioner
         free((void *)this->Password);
     }
 
-    void Credentials::JSON(cJSON **dst)
+    cJSON *Credentials::JSON()
     {
         cJSON *root = cJSON_CreateObject();
 
         cJSON_AddStringToObject(root, "ssid", this->SSID);
         cJSON_AddStringToObject(root, "password", this->Password);
 
-        *dst = root;
+        return root;
     }
 
     Provisioner *Provisioner::New(logger::Logger *logger, status::Controller *status, database::Database *database)
@@ -324,27 +324,25 @@ namespace provisioner
             vTaskDelay(STARTUP_DELAY);
 
             // Get stored Wi-Fi credentials
-            cJSON *credsJSON = NULL;
-            ESP_ERROR_CHECK(Instance->db->Get("credentials", &credsJSON));
+            Credentials *creds = Instance->GetCreds();
 
             // Start in softAP mode
-            if (credsJSON == NULL)
+            if (creds == NULL)
             {
                 Instance->logger->Debug(TAG, "Wi-Fi credentials not found");
                 Instance->logger->Debug(TAG, "Starting in softAP mode: {\"ssid\":\"%s\",\"password\":\"%s\"}", AP_SSID, AP_PASSWORD);
-                Credentials creds = Credentials(AP_SSID, AP_PASSWORD);
-                Instance->apStart(&creds);
+                creds = new Credentials(AP_SSID, AP_PASSWORD);
+                Instance->apStart(creds);
             }
             // Start in station mode
             else
             {
                 Instance->logger->Debug(TAG, "Wi-Fi credentials found");
-                Instance->logger->Debug(TAG, "Starting in station mode: %s", cJSON_PrintUnformatted(credsJSON));
-                Credentials creds = Credentials(credsJSON);
-                Instance->staStart(&creds);
+                Instance->logger->Debug(TAG, "Starting in station mode: {\"ssid\":\"%s\",\"password\":\"%s\"}", creds->SSID, creds->Password);
+                Instance->staStart(creds);
             }
 
-            cJSON_Delete(credsJSON);
+            delete creds;
 
             // Delete provisioner delayed startup task
             vTaskDelete(NULL);
@@ -358,5 +356,27 @@ namespace provisioner
         ESP_ERROR_CHECK(esp_wifi_get_mode(&mode));
 
         return mode;
+    }
+
+    Credentials *Provisioner::GetCreds()
+    {
+        Credentials *creds = NULL;
+
+        cJSON *credsJSON = NULL;
+        ESP_ERROR_CHECK(Instance->db->Get("credentials", &credsJSON));
+
+        if (credsJSON != NULL)
+            creds = new Credentials(credsJSON);
+
+        cJSON_Delete(credsJSON);
+
+        return creds;
+    }
+
+    void Provisioner::SetCreds(Credentials *creds)
+    {
+        cJSON *credsJSON = creds->JSON();
+        ESP_ERROR_CHECK(db->Set("credentials", credsJSON));
+        cJSON_Delete(credsJSON);
     }
 }

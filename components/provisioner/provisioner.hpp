@@ -29,7 +29,7 @@ namespace provisioner
         ~Credentials();
         Credentials(const char *SSID, const char *Password);
         Credentials(cJSON *src);
-        void JSON(cJSON **dst);
+        cJSON *JSON();
     };
 
     class Provisioner
@@ -60,5 +60,7 @@ namespace provisioner
 
     public:
         wifi_mode_t GetMode() const;
+        Credentials *GetCreds();
+        void SetCreds(Credentials *creds);
     };
 }
