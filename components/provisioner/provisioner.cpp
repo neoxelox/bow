@@ -55,6 +55,9 @@ namespace provisioner
         Instance->status = status;
         Instance->db = database->Open(DB_NAMESPACE);
 
+        // Set provisioning status
+        Instance->status->SetStatus(status::Statuses::Provisioning);
+
         // Initialize Wi-Fi NVS partition
         esp_err_t err = nvs_flash_init();
         // Wi-Fi NVS partition has been truncated or format cannot be recognized
@@ -325,5 +328,14 @@ namespace provisioner
             Instance->logger->Debug(TAG, "Unhandled IP event %d", id);
             break;
         }
+    }
+
+    wifi_mode_t Provisioner::GetMode() const
+    {
+        wifi_mode_t mode;
+
+        ESP_ERROR_CHECK(esp_wifi_get_mode(&mode));
+
+        return mode;
     }
 }

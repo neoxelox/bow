@@ -52,5 +52,8 @@ namespace provisioner
     public:
         inline static Provisioner *Instance;
         static Provisioner *New(logger::Logger *logger, status::Controller *status, database::Database *database);
+
+    public:
+        wifi_mode_t GetMode() const;
     };
 }
