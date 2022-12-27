@@ -248,7 +248,7 @@ namespace server
         }
 
         // Otherwise redirect to the frontend hash-based navigation: /#/:URI
-        char location[strlen(request->uri) + 2];
+        char location[strlen(request->uri) + 2 + 1];
         strcpy(location, "/#");
 
         ESP_ERROR_CHECK(httpd_resp_set_hdr(request, Headers::Location, strcat(location, request->uri)));
