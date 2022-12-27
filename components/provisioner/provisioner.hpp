@@ -13,7 +13,7 @@ namespace provisioner
 
     static const char *DB_NAMESPACE = "system";
     static const char *AP_SSID = "Diana Dot";
-    static const char *AP_PASSWORD = "W3BZ1";
+    static const char *AP_PASSWORD = "Y6LBBSMA";
     static const uint8_t AP_MAX_CLIENTS = 5;
 
     class Credentials
@@ -23,11 +23,7 @@ namespace provisioner
         const char *Password;
 
     public:
-        ~Credentials()
-        {
-            free((void *)this->SSID);
-            free((void *)this->Password);
-        }
+        ~Credentials();
         Credentials(const char *SSID, const char *Password);
         Credentials(cJSON *src);
         void JSON(cJSON **dst);

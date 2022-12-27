@@ -6,6 +6,7 @@
 #include "nvs_flash.h"
 #include "lwip/err.h"
 #include "lwip/sys.h"
+#include "lwip/inet.h"
 #include "cJSON.h"
 #include "logger.hpp"
 #include "status.hpp"
@@ -16,14 +17,20 @@ namespace provisioner
 {
     Credentials::Credentials(const char *SSID, const char *Password)
     {
-        this->SSID = SSID;
-        this->Password = Password;
+        this->SSID = strdup(SSID);
+        this->Password = strdup(Password);
     }
 
     Credentials::Credentials(cJSON *src)
     {
         this->SSID = strdup(cJSON_GetObjectItem(src, "ssid")->valuestring);
         this->Password = strdup(cJSON_GetObjectItem(src, "password")->valuestring);
+    }
+
+    Credentials::~Credentials()
+    {
+        free((void *)this->SSID);
+        free((void *)this->Password);
     }
 
     void Credentials::JSON(cJSON **dst)
@@ -81,13 +88,15 @@ namespace provisioner
         if (credsJSON == NULL)
         {
             Instance->logger->Debug(TAG, "Wi-Fi credentials not found");
+            Instance->logger->Debug(TAG, "Starting in softAP mode with {\"ssid\":\"%s\",\"password\":\"%s\"}", AP_SSID, AP_PASSWORD);
             Credentials creds = Credentials(AP_SSID, AP_PASSWORD);
             Instance->apStart(&creds);
         }
         // Start in station mode
         else
         {
-            Instance->logger->Debug(TAG, "Wi-Fi credentials found: %s", cJSON_PrintUnformatted(credsJSON));
+            Instance->logger->Debug(TAG, "Wi-Fi credentials found");
+            Instance->logger->Debug(TAG, "Starting in station mode with %s", cJSON_PrintUnformatted(credsJSON));
             Credentials creds = Credentials(credsJSON);
             Instance->staStart(&creds);
         }
@@ -102,7 +111,33 @@ namespace provisioner
         if (this->apHandle != NULL)
             return;
 
-        // TODO: This
+        // Initialize Wi-Fi in AP mode
+        this->apHandle = esp_netif_create_default_wifi_ap();
+
+        // Register Wi-Fi AP event callbacks
+        ESP_ERROR_CHECK(esp_event_handler_instance_register(
+            WIFI_EVENT, ESP_EVENT_ANY_ID, this->apFunc, NULL, &this->apEHInstance));
+
+        // Configure Wi-Fi in AP mode
+        wifi_config_t cfg = {
+            .ap = {
+                .channel = NULL,                // Use default channel
+                .authmode = WIFI_AUTH_WPA2_PSK, // Set WPA2 as the weakest authmode to accept
+                .ssid_hidden = false,           // Broadcast SSID
+                .max_connection = AP_MAX_CLIENTS,
+            },
+        };
+        strcpy((char *)cfg.ap.ssid, creds->SSID);
+        strcpy((char *)cfg.ap.password, creds->Password);
+
+        ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_AP));
+        // TODO: More esp_wifi_set_xxx configurations...
+        ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_AP, &cfg));
+
+        // TODO: Set static IP or Captive Portal
+
+        // Start Wi-Fi in AP mode
+        ESP_ERROR_CHECK(esp_wifi_start());
     }
 
     void Provisioner::apStop()
@@ -175,13 +210,39 @@ namespace provisioner
 
     void Provisioner::apFunc(void *args, esp_event_base_t base, int32_t id, void *data)
     {
+        // TODO: Make this better, else ifs?
+        esp_netif_ip_info_t ipInfo;
+        char ip[16 + 1];
+        char netmask[16 + 1];
+        char gateway[16 + 1];
+
         switch (id)
         {
-            // TODO: This
-            // WIFI_EVENT_AP_START
-            // WIFI_EVENT_AP_STOP
-            // WIFI_EVENT_AP_STACONNECTED
-            // WIFI_EVENT_AP_STADISCONNECTED
+        case WIFI_EVENT_AP_START:
+            Instance->logger->Debug(TAG, "Started Wi-Fi as AP");
+
+            ESP_ERROR_CHECK(esp_netif_get_ip_info(esp_netif_get_handle_from_ifkey("WIFI_AP_DEF"), &ipInfo));
+
+            sprintf(ip, IPSTR, IP2STR(&ipInfo.ip));
+            sprintf(netmask, IPSTR, IP2STR(&ipInfo.netmask));
+            sprintf(gateway, IPSTR, IP2STR(&ipInfo.gw));
+
+            Instance->logger->Debug(TAG, "Got IP address %s | netmask %s | gateway %s", ip, netmask, gateway);
+            Instance->status->SetStatus(status::Statuses::Idle);
+            break;
+
+        case WIFI_EVENT_AP_STOP:
+            Instance->logger->Debug(TAG, "Stopped Wi-Fi as AP");
+            Instance->status->SetStatus(status::Statuses::Error);
+            break;
+
+        case WIFI_EVENT_AP_STACONNECTED:
+            Instance->logger->Debug(TAG, "Client connected to the Wi-Fi network");
+            break;
+
+        case WIFI_EVENT_AP_STADISCONNECTED:
+            Instance->logger->Debug(TAG, "Client disconnected from the Wi-Fi network");
+            break;
 
         default:
             Instance->logger->Debug(TAG, "Unhandled Wi-Fi event %d", id);
