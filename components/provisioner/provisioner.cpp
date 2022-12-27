@@ -88,7 +88,7 @@ namespace provisioner
         if (credsJSON == NULL)
         {
             Instance->logger->Debug(TAG, "Wi-Fi credentials not found");
-            Instance->logger->Debug(TAG, "Starting in softAP mode with {\"ssid\":\"%s\",\"password\":\"%s\"}", AP_SSID, AP_PASSWORD);
+            Instance->logger->Debug(TAG, "Starting in softAP mode: {\"ssid\":\"%s\",\"password\":\"%s\"}", AP_SSID, AP_PASSWORD);
             Credentials creds = Credentials(AP_SSID, AP_PASSWORD);
             Instance->apStart(&creds);
         }
@@ -96,7 +96,7 @@ namespace provisioner
         else
         {
             Instance->logger->Debug(TAG, "Wi-Fi credentials found");
-            Instance->logger->Debug(TAG, "Starting in station mode with %s", cJSON_PrintUnformatted(credsJSON));
+            Instance->logger->Debug(TAG, "Starting in station mode: %s", cJSON_PrintUnformatted(credsJSON));
             Credentials creds = Credentials(credsJSON);
             Instance->staStart(&creds);
         }
@@ -131,7 +131,9 @@ namespace provisioner
         strcpy((char *)cfg.ap.password, creds->Password);
 
         ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_AP));
-        // TODO: More esp_wifi_set_xxx configurations...
+        ESP_ERROR_CHECK(esp_wifi_set_inactive_time(WIFI_IF_AP, 300));
+        ESP_ERROR_CHECK(esp_wifi_set_country_code("ES", true));
+        ESP_ERROR_CHECK(esp_wifi_set_ps(WIFI_PS_NONE)); // Disable Wi-Fi powersaving
         ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_AP, &cfg));
 
         // TODO: Set static IP or Captive Portal
@@ -182,9 +184,8 @@ namespace provisioner
         strcpy((char *)cfg.sta.password, creds->Password);
 
         ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA));
-        // TODO: More esp_wifi_set_xxx configurations...
-        // Like disabling WIFI powersaving (more performance) esp_wifi_set_ps(WIFI_PS_NONE);
-        // or setting custom MAC address
+        ESP_ERROR_CHECK(esp_wifi_set_country_code("ES", true));
+        ESP_ERROR_CHECK(esp_wifi_set_ps(WIFI_PS_NONE)); // Disable Wi-Fi powersaving
         ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_STA, &cfg));
 
         // Start Wi-Fi in station mode
