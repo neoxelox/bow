@@ -49,11 +49,11 @@ namespace main
             Instance->logger = logger::Logger::New((esp_log_level_t)ESP_LOG_DEBUG); // TODO: Only for debug, change to CONFIG_LOG_DEFAULT_LEVEL
             Instance->status = status::Controller::New(Instance->logger);
             Instance->database = database::Database::New(Instance->logger);
-            Instance->provisioner = provisioner::Provisioner::New(Instance->logger, Instance->status);
+            Instance->provisioner = provisioner::Provisioner::New(Instance->logger, Instance->status, Instance->database);
             Instance->chron = chron::Controller::New(Instance->logger, Instance->provisioner);
-            Instance->server = server::Server::New(Instance->logger, Instance->provisioner);
             Instance->receiver = device::Receiver::New(Instance->logger, Instance->status);
             Instance->transmitter = device::Transmitter::New(Instance->logger, Instance->status);
+            Instance->server = server::Server::New(Instance->logger, Instance->provisioner);
 
             elapsed = esp_timer_get_time() - elapsed;
             Instance->logger->Info(TAG, "Startup took %f ms", (float)(elapsed / 1000.0l));
