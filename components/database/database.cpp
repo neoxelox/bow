@@ -20,11 +20,9 @@ namespace database
         esp_err_t err = nvs_flash_init_partition(PARTITION);
         // Database NVS partition has been truncated or format cannot be recognized
         if (err == ESP_ERR_NVS_NO_FREE_PAGES || err == ESP_ERR_NVS_NEW_VERSION_FOUND)
-        {
-            ESP_ERROR_CHECK(nvs_flash_erase_partition(PARTITION));
-            err = nvs_flash_init_partition(PARTITION);
-        }
-        ESP_ERROR_CHECK(err);
+            Instance->Reset();
+        else if (err != ESP_OK)
+            ESP_ERROR_CHECK(err);
 
         nvs_stats_t info;
         Instance->Info(&info);
@@ -51,6 +49,13 @@ namespace database
         return handle;
     }
 
+    void Database::Reset()
+    {
+        ESP_ERROR_CHECK(nvs_flash_deinit_partition(PARTITION));
+        ESP_ERROR_CHECK(nvs_flash_erase_partition(PARTITION));
+        ESP_ERROR_CHECK(nvs_flash_init_partition(PARTITION));
+    }
+
     esp_err_t Handle::Drop()
     {
         esp_err_t err;
@@ -74,8 +79,7 @@ namespace database
         if (err != ESP_OK)
             return err;
 
-        // The namespace name takes one entry
-        (*count)++;
+        // The namespace name takes one extra entry but I ignore it
 
         return ESP_OK;
     }

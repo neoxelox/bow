@@ -45,5 +45,6 @@ namespace database
     public:
         void Info(nvs_stats_t *info);
         Handle *Open(const char *nmspace);
+        void Reset();
     };
 }
