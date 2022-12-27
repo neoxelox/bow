@@ -121,7 +121,7 @@ namespace server
         FILE *file = fopen(path, "r");
         if (file == NULL)
         {
-            httpd_resp_send_err(request, HTTPD_500_INTERNAL_SERVER_ERROR, NULL);
+            ESP_ERROR_CHECK(httpd_resp_send_err(request, HTTPD_500_INTERNAL_SERVER_ERROR, NULL));
             return ESP_FAIL;
         }
 
@@ -137,8 +137,8 @@ namespace server
                 fclose(file);
 
                 // Abort sending file
-                httpd_resp_send_chunk(request, NULL, 0);
-                httpd_resp_send_err(request, HTTPD_500_INTERNAL_SERVER_ERROR, NULL);
+                ESP_ERROR_CHECK(httpd_resp_send_chunk(request, NULL, 0));
+                ESP_ERROR_CHECK(httpd_resp_send_err(request, HTTPD_500_INTERNAL_SERVER_ERROR, NULL));
 
                 return ESP_FAIL;
             }
@@ -148,9 +148,9 @@ namespace server
         fclose(file);
 
         // Close connection for large responses to free the underlying socket instantly
-        httpd_resp_set_hdr(request, Headers::Connection, "close");
+        ESP_ERROR_CHECK(httpd_resp_set_hdr(request, Headers::Connection, "close"));
         // Respond with an empty chunk to signal HTTP response completion
-        httpd_resp_send_chunk(request, NULL, 0);
+        ESP_ERROR_CHECK(httpd_resp_send_chunk(request, NULL, 0));
 
         return ESP_OK;
     }

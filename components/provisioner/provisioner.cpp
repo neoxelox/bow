@@ -13,6 +13,7 @@
 #include "logger.hpp"
 #include "status.hpp"
 #include "database.hpp"
+#include "capdns.h"
 #include "provisioner.hpp"
 
 namespace provisioner
@@ -120,16 +121,20 @@ namespace provisioner
         ESP_ERROR_CHECK(esp_wifi_set_ps(WIFI_PS_NONE)); // Disable Wi-Fi powersaving
         ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_AP, &cfg));
 
-        // TODO: Set static IP or Captive Portal
-
         // Start Wi-Fi in AP mode
         ESP_ERROR_CHECK(esp_wifi_start());
+
+        // TODO: Start captive portal DNS server
+        // capdns_start(16);
     }
 
     void Provisioner::apStop()
     {
         if (this->apHandle == NULL)
             return;
+
+        // TODO: Stop captive portal DNS server
+        // capdns_stop();
 
         // Stop Wi-Fi in AP mode
         ESP_ERROR_CHECK(esp_wifi_stop());
