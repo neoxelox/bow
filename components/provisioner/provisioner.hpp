@@ -3,6 +3,8 @@
 #include "esp_wifi.h"
 #include "esp_event.h"
 #include "cJSON.h"
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
 #include "logger.hpp"
 #include "status.hpp"
 #include "database.hpp"
@@ -12,6 +14,7 @@ namespace provisioner
     static const char *TAG = "provisioner";
 
     static const char *DB_NAMESPACE = "system";
+    static const TickType_t STARTUP_DELAY = (5 * 1000) / portTICK_PERIOD_MS; // 5 seconds
     static const char *AP_SSID = "Diana Dot";
     static const char *AP_PASSWORD = "Y6LBBSMA";
     static const uint8_t AP_MAX_CLIENTS = 5;
@@ -39,12 +42,14 @@ namespace provisioner
         esp_netif_t *staHandle;
         esp_event_handler_instance_t apEHInstance;
         esp_event_handler_instance_t staEHInstance;
+        TaskHandle_t taskHandle;
 
     private:
         void apStart(Credentials *creds);
         void apStop();
         void staStart(Credentials *creds);
         void staStop();
+        static void taskFunc(void *args);
         static void apFunc(void *args, esp_event_base_t base, int32_t id, void *data);
         static void staFunc(void *args, esp_event_base_t base, int32_t id, void *data);
         static void ipFunc(void *args, esp_event_base_t base, int32_t id, void *data);

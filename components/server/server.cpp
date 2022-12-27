@@ -29,9 +29,13 @@ namespace server
 
         Instance->espServer = NULL;
 
-        // Register Wi-Fi and LwIP event callbacks
+        // Register Wi-Fi station/softAP and LwIP event callbacks
         ESP_ERROR_CHECK(esp_event_handler_instance_register(
-            WIFI_EVENT, WIFI_EVENT_STA_DISCONNECTED, Instance->wifiFunc, NULL, NULL));
+            WIFI_EVENT, WIFI_EVENT_STA_DISCONNECTED, Instance->staFunc, NULL, NULL));
+        ESP_ERROR_CHECK(esp_event_handler_instance_register(
+            WIFI_EVENT, WIFI_EVENT_AP_START, Instance->apFunc, NULL, NULL));
+        ESP_ERROR_CHECK(esp_event_handler_instance_register(
+            WIFI_EVENT, WIFI_EVENT_AP_STOP, Instance->apFunc, NULL, NULL));
         ESP_ERROR_CHECK(esp_event_handler_instance_register(
             IP_EVENT, IP_EVENT_STA_GOT_IP, Instance->ipFunc, NULL, NULL));
         ESP_ERROR_CHECK(esp_event_handler_instance_register(
@@ -151,9 +155,20 @@ namespace server
         return ESP_OK;
     }
 
-    void Server::wifiFunc(void *args, esp_event_base_t base, int32_t id, void *data)
+    void Server::apFunc(void *args, esp_event_base_t base, int32_t id, void *data)
     {
-        // Stop HTTP server when Wi-Fi is disconnected because underlying sockets are freed
+        // Start HTTP server when Wi-Fi softAP has started
+        if (id == WIFI_EVENT_AP_START)
+            Instance->start();
+
+        // Stop HTTP server when Wi-Fi softAP has stopped because underlying sockets are freed
+        else // WIFI_EVENT_AP_STOP
+            Instance->stop();
+    }
+
+    void Server::staFunc(void *args, esp_event_base_t base, int32_t id, void *data)
+    {
+        // Stop HTTP server when Wi-Fi station is disconnected because underlying sockets are freed
         // WIFI_EVENT_STA_DISCONNECTED
         Instance->stop();
     }

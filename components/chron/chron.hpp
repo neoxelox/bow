@@ -30,7 +30,7 @@ namespace chron
         void start();
         void stop();
         static void taskFunc(void *args);
-        static void wifiFunc(void *args, esp_event_base_t base, int32_t id, void *data);
+        static void staFunc(void *args, esp_event_base_t base, int32_t id, void *data);
         static void ipFunc(void *args, esp_event_base_t base, int32_t id, void *data);
         static void ntpFunc(struct timeval *now_tv);
 

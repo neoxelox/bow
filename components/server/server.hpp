@@ -77,7 +77,8 @@ namespace server
         void start();
         void stop();
         esp_err_t serveFile(httpd_req_t *request, const char *path);
-        static void wifiFunc(void *args, esp_event_base_t base, int32_t id, void *data);
+        static void apFunc(void *args, esp_event_base_t base, int32_t id, void *data);
+        static void staFunc(void *args, esp_event_base_t base, int32_t id, void *data);
         static void ipFunc(void *args, esp_event_base_t base, int32_t id, void *data);
         static esp_err_t errorHandler(httpd_req_t *request, httpd_err_code_t error);
         static esp_err_t frontHandler(httpd_req_t *request);

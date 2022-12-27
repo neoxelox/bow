@@ -42,9 +42,9 @@ namespace chron
         setenv("TZ", TIME_ZONE, 1);
         tzset();
 
-        // Register Wi-Fi and LwIP event callbacks
+        // Register Wi-Fi station and LwIP event callbacks
         ESP_ERROR_CHECK(esp_event_handler_instance_register(
-            WIFI_EVENT, WIFI_EVENT_STA_DISCONNECTED, Instance->wifiFunc, NULL, NULL));
+            WIFI_EVENT, WIFI_EVENT_STA_DISCONNECTED, Instance->staFunc, NULL, NULL));
         ESP_ERROR_CHECK(esp_event_handler_instance_register(
             IP_EVENT, IP_EVENT_STA_GOT_IP, Instance->ipFunc, NULL, NULL));
         ESP_ERROR_CHECK(esp_event_handler_instance_register(
@@ -104,9 +104,9 @@ namespace chron
         this->logger->Debug(TAG, "Stopped NTP sync");
     }
 
-    void Controller::wifiFunc(void *args, esp_event_base_t base, int32_t id, void *data)
+    void Controller::staFunc(void *args, esp_event_base_t base, int32_t id, void *data)
     {
-        // Stop NTP sync when Wi-Fi is disconnected because underlying sockets are freed
+        // Stop NTP sync when Wi-Fi station is disconnected because underlying sockets are freed
         // WIFI_EVENT_STA_DISCONNECTED
         Instance->stop();
     }

@@ -8,6 +8,8 @@
 #include "lwip/sys.h"
 #include "lwip/inet.h"
 #include "cJSON.h"
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
 #include "logger.hpp"
 #include "status.hpp"
 #include "database.hpp"
@@ -83,28 +85,8 @@ namespace provisioner
         ESP_ERROR_CHECK(esp_wifi_init(&cfg));
         ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_NULL));
 
-        // Get stored Wi-Fi credentials
-        cJSON *credsJSON = NULL;
-        ESP_ERROR_CHECK(Instance->db->Get("credentials", &credsJSON));
-
-        // Start in softAP mode
-        if (credsJSON == NULL)
-        {
-            Instance->logger->Debug(TAG, "Wi-Fi credentials not found");
-            Instance->logger->Debug(TAG, "Starting in softAP mode: {\"ssid\":\"%s\",\"password\":\"%s\"}", AP_SSID, AP_PASSWORD);
-            Credentials creds = Credentials(AP_SSID, AP_PASSWORD);
-            Instance->apStart(&creds);
-        }
-        // Start in station mode
-        else
-        {
-            Instance->logger->Debug(TAG, "Wi-Fi credentials found");
-            Instance->logger->Debug(TAG, "Starting in station mode: %s", cJSON_PrintUnformatted(credsJSON));
-            Credentials creds = Credentials(credsJSON);
-            Instance->staStart(&creds);
-        }
-
-        cJSON_Delete(credsJSON);
+        // Create provisioner delayed startup task
+        xTaskCreatePinnedToCore(Instance->taskFunc, "Provisioner", 4 * 1024, NULL, 11, &Instance->taskHandle, tskNO_AFFINITY);
 
         return Instance;
     }
@@ -134,7 +116,6 @@ namespace provisioner
         strcpy((char *)cfg.ap.password, creds->Password);
 
         ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_AP));
-        ESP_ERROR_CHECK(esp_wifi_set_inactive_time(WIFI_IF_AP, 300));
         ESP_ERROR_CHECK(esp_wifi_set_country_code("ES", true));
         ESP_ERROR_CHECK(esp_wifi_set_ps(WIFI_PS_NONE)); // Disable Wi-Fi powersaving
         ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_AP, &cfg));
@@ -327,6 +308,41 @@ namespace provisioner
         default:
             Instance->logger->Debug(TAG, "Unhandled IP event %d", id);
             break;
+        }
+    }
+
+    void Provisioner::taskFunc(void *args)
+    {
+        while (1)
+        {
+            // Delay provisioner startup to let the other components initialize first
+            vTaskDelay(STARTUP_DELAY);
+
+            // Get stored Wi-Fi credentials
+            cJSON *credsJSON = NULL;
+            ESP_ERROR_CHECK(Instance->db->Get("credentials", &credsJSON));
+
+            // Start in softAP mode
+            if (credsJSON == NULL)
+            {
+                Instance->logger->Debug(TAG, "Wi-Fi credentials not found");
+                Instance->logger->Debug(TAG, "Starting in softAP mode: {\"ssid\":\"%s\",\"password\":\"%s\"}", AP_SSID, AP_PASSWORD);
+                Credentials creds = Credentials(AP_SSID, AP_PASSWORD);
+                Instance->apStart(&creds);
+            }
+            // Start in station mode
+            else
+            {
+                Instance->logger->Debug(TAG, "Wi-Fi credentials found");
+                Instance->logger->Debug(TAG, "Starting in station mode: %s", cJSON_PrintUnformatted(credsJSON));
+                Credentials creds = Credentials(credsJSON);
+                Instance->staStart(&creds);
+            }
+
+            cJSON_Delete(credsJSON);
+
+            // Delete provisioner delayed startup task
+            vTaskDelete(NULL);
         }
     }
 
