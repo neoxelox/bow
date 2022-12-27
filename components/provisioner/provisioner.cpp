@@ -1,3 +1,4 @@
+#include <string.h>
 #include "esp_err.h"
 #include "esp_system.h"
 #include "esp_wifi.h"
@@ -5,13 +6,37 @@
 #include "nvs_flash.h"
 #include "lwip/err.h"
 #include "lwip/sys.h"
+#include "cJSON.h"
 #include "logger.hpp"
 #include "status.hpp"
+#include "database.hpp"
 #include "provisioner.hpp"
 
 namespace provisioner
 {
-    Provisioner *Provisioner::New(logger::Logger *logger, status::Controller *status)
+    Credentials::Credentials(const char *SSID, const char *Password)
+    {
+        this->SSID = SSID;
+        this->Password = Password;
+    }
+
+    Credentials::Credentials(cJSON *src)
+    {
+        this->SSID = strdup(cJSON_GetObjectItem(src, "ssid")->valuestring);
+        this->Password = strdup(cJSON_GetObjectItem(src, "password")->valuestring);
+    }
+
+    void Credentials::JSON(cJSON **dst)
+    {
+        cJSON *root = cJSON_CreateObject();
+
+        cJSON_AddStringToObject(root, "ssid", this->SSID);
+        cJSON_AddStringToObject(root, "password", this->Password);
+
+        *dst = root;
+    }
+
+    Provisioner *Provisioner::New(logger::Logger *logger, status::Controller *status, database::Database *database)
     {
         if (Instance != NULL)
             return Instance;
@@ -21,6 +46,7 @@ namespace provisioner
         // Inject dependencies
         Instance->logger = logger;
         Instance->status = status;
+        Instance->db = database->Open(DB_NAMESPACE);
 
         // Initialize Wi-Fi NVS partition
         esp_err_t err = nvs_flash_init();
@@ -32,24 +58,82 @@ namespace provisioner
         }
         ESP_ERROR_CHECK(err);
 
-        // Initialize Wi-Fi in station mode, LwIP and default event loop
-        ESP_ERROR_CHECK(esp_netif_init());
+        // Initialize default event loop
         ESP_ERROR_CHECK(esp_event_loop_create_default());
-        esp_netif_create_default_wifi_sta();
-        wifi_init_config_t driverCfg = WIFI_INIT_CONFIG_DEFAULT();
-        ESP_ERROR_CHECK(esp_wifi_init(&driverCfg));
 
-        // Register Wi-Fi and LwIP event callbacks
-        ESP_ERROR_CHECK(esp_event_handler_instance_register(
-            WIFI_EVENT, ESP_EVENT_ANY_ID, Instance->wifiFunc, NULL, NULL));
+        // Register LwIP event callbacks
         ESP_ERROR_CHECK(esp_event_handler_instance_register(
             IP_EVENT, ESP_EVENT_ANY_ID, Instance->ipFunc, NULL, NULL));
 
+        // Initialize LwIP
+        ESP_ERROR_CHECK(esp_netif_init());
+
+        // Initialize Wi-Fi driver
+        wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
+        ESP_ERROR_CHECK(esp_wifi_init(&cfg));
+        ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_NULL));
+
+        // Get stored Wi-Fi credentials
+        cJSON *credsJSON = NULL;
+        ESP_ERROR_CHECK(Instance->db->Get("credentials", &credsJSON));
+
+        // Start in softAP mode
+        if (credsJSON == NULL)
+        {
+            Instance->logger->Debug(TAG, "Wi-Fi credentials not found");
+            Credentials creds = Credentials(AP_SSID, AP_PASSWORD);
+            Instance->apStart(&creds);
+        }
+        // Start in station mode
+        else
+        {
+            Instance->logger->Debug(TAG, "Wi-Fi credentials found: %s", cJSON_PrintUnformatted(credsJSON));
+            Credentials creds = Credentials(credsJSON);
+            Instance->staStart(&creds);
+        }
+
+        cJSON_Delete(credsJSON);
+
+        return Instance;
+    }
+
+    void Provisioner::apStart(Credentials *creds)
+    {
+        if (this->apHandle != NULL)
+            return;
+
+        // TODO: This
+    }
+
+    void Provisioner::apStop()
+    {
+        if (this->apHandle == NULL)
+            return;
+
+        // Stop Wi-Fi in AP mode
+        ESP_ERROR_CHECK(esp_wifi_stop());
+        ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_NULL));
+
+        // Unregister Wi-Fi AP event callbacks
+        ESP_ERROR_CHECK(esp_event_handler_instance_unregister(
+            WIFI_EVENT, ESP_EVENT_ANY_ID, this->apEHInstance));
+    }
+
+    void Provisioner::staStart(Credentials *creds)
+    {
+        if (this->staHandle != NULL)
+            return;
+
+        // Initialize Wi-Fi in station mode
+        this->staHandle = esp_netif_create_default_wifi_sta();
+
+        // Register Wi-Fi station event callbacks
+        ESP_ERROR_CHECK(esp_event_handler_instance_register(
+            WIFI_EVENT, ESP_EVENT_ANY_ID, this->staFunc, NULL, &this->staEHInstance));
+
         // Configure Wi-Fi in station mode
-        wifi_config_t wifiCfg = {
+        wifi_config_t cfg = {
             .sta = {
-                .ssid = "",        // TODO: Only for debug, make SoftAp provisioning scheme
-                .password = "",   // TODO: Only for debug, make SoftAp provisioning scheme
                 .scan_method = WIFI_FAST_SCAN, // Scan until the first matched AP is found
                 .channel = NULL,               // Scan on all channels
                 .threshold = {
@@ -59,27 +143,56 @@ namespace provisioner
                 .sae_pwe_h2e = WPA3_SAE_PWE_BOTH, // Enable Protected Management Frame for WPA3 networks
             },
         };
+        strcpy((char *)cfg.sta.ssid, creds->SSID);
+        strcpy((char *)cfg.sta.password, creds->Password);
+
         ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA));
         // TODO: More esp_wifi_set_xxx configurations...
         // Like disabling WIFI powersaving (more performance) esp_wifi_set_ps(WIFI_PS_NONE);
         // or setting custom MAC address
-        ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_STA, &wifiCfg));
+        ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_STA, &cfg));
 
         // Start Wi-Fi in station mode
         ESP_ERROR_CHECK(esp_wifi_start());
-
-        return Instance;
     }
 
-    void Provisioner::wifiFunc(void *args, esp_event_base_t base, int32_t id, void *data)
+    void Provisioner::staStop()
+    {
+        if (this->staHandle == NULL)
+            return;
+
+        // Disconnect from the target Wi-Fi network
+        ESP_ERROR_CHECK(esp_wifi_disconnect());
+
+        // Stop Wi-Fi in station mode
+        ESP_ERROR_CHECK(esp_wifi_stop());
+        ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_NULL));
+
+        // Unregister Wi-Fi station event callbacks
+        ESP_ERROR_CHECK(esp_event_handler_instance_unregister(
+            WIFI_EVENT, ESP_EVENT_ANY_ID, this->staEHInstance));
+    }
+
+    void Provisioner::apFunc(void *args, esp_event_base_t base, int32_t id, void *data)
     {
         switch (id)
         {
-        case WIFI_EVENT_SCAN_DONE:
-            Instance->logger->Debug(TAG, "Scanned Wi-Fi networks");
-            Instance->status->SetStatus(status::Statuses::Provisioning);
-            break;
+            // TODO: This
+            // WIFI_EVENT_AP_START
+            // WIFI_EVENT_AP_STOP
+            // WIFI_EVENT_AP_STACONNECTED
+            // WIFI_EVENT_AP_STADISCONNECTED
 
+        default:
+            Instance->logger->Debug(TAG, "Unhandled Wi-Fi event %d", id);
+            break;
+        }
+    }
+
+    void Provisioner::staFunc(void *args, esp_event_base_t base, int32_t id, void *data)
+    {
+        switch (id)
+        {
         case WIFI_EVENT_STA_START:
             Instance->logger->Debug(TAG, "Started Wi-Fi as station");
             Instance->status->SetStatus(status::Statuses::Provisioning);
@@ -96,6 +209,8 @@ namespace provisioner
         case WIFI_EVENT_STA_CONNECTED:
             Instance->logger->Debug(TAG, "Connected to the target Wi-Fi network");
             Instance->status->SetStatus(status::Statuses::Provisioning);
+
+            // TODO: Set static IP
             break;
 
         case WIFI_EVENT_STA_DISCONNECTED:
