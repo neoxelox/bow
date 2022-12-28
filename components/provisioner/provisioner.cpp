@@ -209,7 +209,7 @@ namespace provisioner
         switch (id)
         {
         case WIFI_EVENT_AP_START:
-            Instance->logger->Debug(TAG, "Started Wi-Fi as AP");
+            Instance->logger->Debug(TAG, "Started Wi-Fi as access point");
 
             ESP_ERROR_CHECK(esp_netif_get_ip_info(esp_netif_get_handle_from_ifkey("WIFI_AP_DEF"), &ipInfo));
 
@@ -222,7 +222,7 @@ namespace provisioner
             break;
 
         case WIFI_EVENT_AP_STOP:
-            Instance->logger->Debug(TAG, "Stopped Wi-Fi as AP");
+            Instance->logger->Debug(TAG, "Stopped Wi-Fi as access point");
             Instance->status->SetStatus(status::Statuses::Error);
             break;
 
@@ -248,7 +248,7 @@ namespace provisioner
             Instance->logger->Debug(TAG, "Started Wi-Fi as station");
             Instance->status->SetStatus(status::Statuses::Provisioning);
 
-            // Connect to target Wi-Fi network // TODO: Make it exponentially retriable
+            // Connect to target Wi-Fi network
             ESP_ERROR_CHECK(esp_wifi_connect());
             break;
 
@@ -261,15 +261,35 @@ namespace provisioner
             Instance->logger->Debug(TAG, "Connected to the target Wi-Fi network");
             Instance->status->SetStatus(status::Statuses::Provisioning);
 
+            // Reset retries
+            Instance->staRetries = 0;
+
             // TODO: Set static IP
             break;
 
         case WIFI_EVENT_STA_DISCONNECTED:
-            Instance->logger->Debug(TAG, "Disconnected from the target Wi-Fi network");
+            Instance->logger->Debug(TAG, "Disconnected from the target Wi-Fi network %d/%d", Instance->staRetries, STA_MAX_RETRIES);
             Instance->status->SetStatus(status::Statuses::Error);
 
-            // Reconnect to target Wi-Fi network // TODO: Make it exponentially retriable
-            ESP_ERROR_CHECK(esp_wifi_connect());
+            // If retried for too long switch to softAP mode fallback
+            if (Instance->staRetries == STA_MAX_RETRIES)
+            {
+                Instance->staStop();
+                Credentials creds = Credentials(AP_SSID, AP_PASSWORD);
+                Instance->apStart(&creds);
+            }
+            // Ignore further Wi-Fi station disconnections, this can happen as when station
+            // is stopped it disconnects from the target Wi-Fi and triggers an event
+            else if (Instance->staRetries > STA_MAX_RETRIES)
+            {
+            }
+            // Otherwise try to reconnect to target Wi-Fi network
+            else
+            {
+                Instance->staRetries++;
+                ESP_ERROR_CHECK(esp_wifi_connect());
+            }
+
             break;
 
         case WIFI_EVENT_STA_BSS_RSSI_LOW:

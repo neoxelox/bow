@@ -15,9 +15,12 @@ namespace provisioner
 
     static const char *DB_NAMESPACE = "system";
     static const TickType_t STARTUP_DELAY = (5 * 1000) / portTICK_PERIOD_MS; // 5 seconds
+
     static const char *AP_SSID = "Diana Dot";
     static const char *AP_PASSWORD = "Y6LBBSMA";
     static const uint8_t AP_MAX_CLIENTS = 5;
+
+    static const uint8_t STA_MAX_RETRIES = 10;
 
     class Credentials
     {
@@ -42,6 +45,7 @@ namespace provisioner
         esp_netif_t *staHandle;
         esp_event_handler_instance_t apEHInstance;
         esp_event_handler_instance_t staEHInstance;
+        uint8_t staRetries;
         TaskHandle_t taskHandle;
 
     private:
