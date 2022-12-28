@@ -94,7 +94,7 @@ namespace server
         // TODO: logger middleware
 
         // Register api handlers
-        ESP_ERROR_CHECK(httpd_register_uri_handler(this->espServer, &this->apiGetInfoURIHandler));
+        ESP_ERROR_CHECK(httpd_register_uri_handler(this->espServer, &this->apiPostRegisterURIHandler));
 
         // Register frontend handler, note that it has to be the last one to catch all other URLs
         ESP_ERROR_CHECK(httpd_register_uri_handler(this->espServer, &this->frontURIHandler));
@@ -115,13 +115,27 @@ namespace server
         this->logger->Debug(TAG, "Stopped HTTP server");
     }
 
-    esp_err_t Server::serveFile(httpd_req_t *request, const char *path)
+    esp_err_t Server::sendFile(httpd_req_t *request, const char *path, const char *status)
     {
+        esp_err_t err;
+
+        // Set appropiate content type, encoding and status
+        err = httpd_resp_set_hdr(request, Headers::ContentEncoding, ContentEncodings::GZIP);
+        if (err != ESP_OK)
+            return err;
+
+        err = httpd_resp_set_status(request, status);
+        if (err != ESP_OK)
+            return err;
+
+        err = httpd_resp_set_type(request, ContentTypes::TextHTML);
+        if (err != ESP_OK)
+            return err;
+
         // Open file
         FILE *file = fopen(path, "r");
         if (file == NULL)
         {
-            ESP_ERROR_CHECK(httpd_resp_send_err(request, HTTPD_500_INTERNAL_SERVER_ERROR, NULL));
             return ESP_FAIL;
         }
 
@@ -136,13 +150,14 @@ namespace server
                 // Close file
                 fclose(file);
 
-                // On captive portal client may reset the connection suddenly, ignore it and do not panic
+                // On large responses client may reset the connection suddenly, ignore it and do not panic
                 if (errno == ECONNRESET || errno == ENOTCONN)
                     return ESP_OK;
 
                 // Abort sending file
-                ESP_ERROR_CHECK(httpd_resp_send_chunk(request, NULL, 0));
-                ESP_ERROR_CHECK(httpd_resp_send_err(request, HTTPD_500_INTERNAL_SERVER_ERROR, NULL));
+                err = httpd_resp_send_chunk(request, NULL, 0);
+                if (err != ESP_OK)
+                    return err;
 
                 return ESP_FAIL;
             }
@@ -152,9 +167,73 @@ namespace server
         fclose(file);
 
         // Close connection for large responses to free the underlying socket instantly
-        ESP_ERROR_CHECK(httpd_resp_set_hdr(request, Headers::Connection, "close"));
+        err = httpd_resp_set_hdr(request, Headers::Connection, "close");
+        if (err != ESP_OK)
+            return err;
+
         // Respond with an empty chunk to signal HTTP response completion
-        ESP_ERROR_CHECK(httpd_resp_send_chunk(request, NULL, 0));
+        err = httpd_resp_send_chunk(request, NULL, 0);
+        if (err != ESP_OK)
+            return err;
+
+        return ESP_OK;
+    }
+
+    esp_err_t Server::sendJSON(httpd_req_t *request, cJSON *json, const char *status)
+    {
+        esp_err_t err;
+
+        // Set appropiate content type and status
+        err = httpd_resp_set_status(request, status);
+        if (err != ESP_OK)
+            return err;
+
+        err = httpd_resp_set_type(request, ContentTypes::ApplicationJSON);
+        if (err != ESP_OK)
+            return err;
+
+        // Send all body at once
+        const char *body = cJSON_PrintUnformatted(json);
+        err = httpd_resp_send(request, body, HTTPD_RESP_USE_STRLEN);
+        free((void *)body);
+        if (err != ESP_OK)
+            return err;
+
+        return ESP_OK;
+    }
+
+    esp_err_t Server::recvJSON(httpd_req_t *request, cJSON **json)
+    {
+        esp_err_t err;
+
+        char body[MAX_REQUEST_CONTENT_SIZE + 1];
+
+        // Check if request content fits in body buffer
+        if (request->content_len > MAX_REQUEST_CONTENT_SIZE)
+            return ESP_ERR_NO_MEM;
+
+        // Trying to receive with no content generates an error
+        if (request->content_len < 2)
+        {
+            *json = cJSON_Parse("{}");
+            return ESP_OK;
+        }
+
+        err = httpd_req_recv(request, body, request->content_len);
+        if (err <= 0)
+        {
+            // On large responses client may reset the connection suddenly, ignore it and do not panic
+            if (err == HTTPD_SOCK_ERR_TIMEOUT)
+                return ESP_OK;
+
+            return ESP_FAIL;
+        }
+
+        // Ensure NULL-terminated string
+        body[request->content_len] = '\0';
+
+        // Parse request JSON content
+        *json = cJSON_Parse(body);
 
         return ESP_OK;
     }
@@ -230,6 +309,9 @@ namespace server
 
         ESP_ERROR_CHECK(httpd_resp_send(request, body, HTTPD_RESP_USE_STRLEN));
 
+        free((void *)body);
+        cJSON_Delete(root);
+
         // Framework-necessary code
 #ifdef CONFIG_HTTPD_ERR_RESP_NO_DELAY
         if (nodelay == 1)
@@ -244,9 +326,6 @@ namespace server
 #endif
         // ------------------------
 
-        free((void *)body);
-        cJSON_Delete(root);
-
         return ESP_FAIL;
     }
 
@@ -257,10 +336,7 @@ namespace server
         {
             // Set Cache Control header so clients load the frontend faster
             ESP_ERROR_CHECK(httpd_resp_set_hdr(request, Headers::CacheControl, "max-age=604800, stale-while-revalidate=86400, stale-if-error=86400"));
-            ESP_ERROR_CHECK(httpd_resp_set_hdr(request, Headers::ContentEncoding, ContentEncodings::GZIP));
-            ESP_ERROR_CHECK(httpd_resp_set_status(request, Statuses::_200));
-            ESP_ERROR_CHECK(httpd_resp_set_type(request, ContentTypes::TextHTML));
-            ESP_ERROR_CHECK(Instance->serveFile(request, FRONTEND));
+            ESP_ERROR_CHECK(Instance->sendFile(request, FRONTEND, Statuses::_200));
 
             return ESP_OK;
         }
@@ -300,26 +376,18 @@ namespace server
         return ESP_OK;
     }
 
-    esp_err_t Server::apiGetInfoHandler(httpd_req_t *request)
+    esp_err_t Server::apiPostRegisterHandler(httpd_req_t *request)
     {
-        cJSON *root = cJSON_CreateObject();
-        cJSON_AddStringToObject(root, "chip", "esp32-s3");
+        // esp_hw_support esp_random
 
-        // TODO: And endpoint that gives you:
-        // - Chip info
-        // - Firmware info
-        // - Tasks info
-        // - Resource info
-        // - Time info
-        // - Storage info (FATFS/NVS)
+        cJSON *reqJSON = NULL;
+        ESP_ERROR_CHECK(Instance->recvJSON(request, &reqJSON));
 
-        const char *body = cJSON_PrintUnformatted(root);
-        ESP_ERROR_CHECK(httpd_resp_set_status(request, Statuses::_200));
-        ESP_ERROR_CHECK(httpd_resp_set_type(request, ContentTypes::ApplicationJSON));
-        ESP_ERROR_CHECK(httpd_resp_send(request, body, HTTPD_RESP_USE_STRLEN));
+        cJSON_AddNumberToObject(reqJSON, "challenge", 69);
 
-        free((void *)body);
-        cJSON_Delete(root);
+        ESP_ERROR_CHECK(Instance->sendJSON(request, reqJSON, Statuses::_200));
+
+        cJSON_Delete(reqJSON);
 
         return ESP_OK;
     }

@@ -380,6 +380,8 @@ namespace provisioner
 
     Credentials *Provisioner::GetCreds()
     {
+        // TODO: Decrypt password
+
         Credentials *creds = NULL;
 
         cJSON *credsJSON = NULL;
@@ -395,6 +397,8 @@ namespace provisioner
 
     void Provisioner::SetCreds(Credentials *creds)
     {
+        // TODO: Encrypt password
+
         cJSON *credsJSON = creds->JSON();
         ESP_ERROR_CHECK(db->Set("credentials", credsJSON));
         cJSON_Delete(credsJSON);

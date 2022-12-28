@@ -4,6 +4,7 @@
 #include "esp_http_server.h"
 #include "http_parser.h"
 #include "esp_vfs_fat.h"
+#include "cJSON.h"
 #include "logger.hpp"
 #include "provisioner.hpp"
 
@@ -17,6 +18,7 @@ namespace server
 
     static const uint16_t PORT = 80;
     static const uint16_t MAX_CLIENTS = 5;
+    static const uint32_t MAX_REQUEST_CONTENT_SIZE = 1024;
 
     namespace Errors
     {
@@ -72,18 +74,20 @@ namespace server
         httpd_handle_t espServer;
         wl_handle_t fsHandle;
         httpd_uri_t frontURIHandler = {"/*", Methods::GET, frontHandler};
-        httpd_uri_t apiGetInfoURIHandler = {"/api/info", Methods::GET, apiGetInfoHandler};
+        httpd_uri_t apiPostRegisterURIHandler = {"/api/register", Methods::POST, apiPostRegisterHandler};
 
     private:
         void start();
         void stop();
-        esp_err_t serveFile(httpd_req_t *request, const char *path);
+        esp_err_t sendFile(httpd_req_t *request, const char *path, const char *status);
+        esp_err_t sendJSON(httpd_req_t *request, cJSON *json, const char *status);
+        esp_err_t recvJSON(httpd_req_t *request, cJSON **json);
         static void apFunc(void *args, esp_event_base_t base, int32_t id, void *data);
         static void staFunc(void *args, esp_event_base_t base, int32_t id, void *data);
         static void ipFunc(void *args, esp_event_base_t base, int32_t id, void *data);
         static esp_err_t errorHandler(httpd_req_t *request, httpd_err_code_t error);
         static esp_err_t frontHandler(httpd_req_t *request);
-        static esp_err_t apiGetInfoHandler(httpd_req_t *request);
+        static esp_err_t apiPostRegisterHandler(httpd_req_t *request);
 
     public:
         inline static Server *Instance;
