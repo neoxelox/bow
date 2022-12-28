@@ -213,7 +213,6 @@ namespace server
 
         const char *body = cJSON_PrintUnformatted(root);
 
-        // TODO: Set required headers with httpd_resp_set_hdr
         ESP_ERROR_CHECK(httpd_resp_set_status(request, status));
         ESP_ERROR_CHECK(httpd_resp_set_type(request, ContentTypes::ApplicationJSON));
 
@@ -315,7 +314,6 @@ namespace server
         // - Storage info (FATFS/NVS)
 
         const char *body = cJSON_PrintUnformatted(root);
-        // TODO: Set required headers with httpd_resp_set_hdr
         ESP_ERROR_CHECK(httpd_resp_set_status(request, Statuses::_200));
         ESP_ERROR_CHECK(httpd_resp_set_type(request, ContentTypes::ApplicationJSON));
         ESP_ERROR_CHECK(httpd_resp_send(request, body, HTTPD_RESP_USE_STRLEN));
