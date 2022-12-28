@@ -38,6 +38,7 @@ namespace server
         static const char *_200 = "200 OK";
         static const char *_204 = "204 No Content";
         static const char *_301 = "301 Moved Permanently";
+        static const char *_302 = "302 Temporary Redirect";
         static const char *_400 = "400 Bad Request";
         static const char *_404 = "404 Not Found";
         static const char *_500 = "500 Internal Server Error";

@@ -136,6 +136,10 @@ namespace server
                 // Close file
                 fclose(file);
 
+                // On captive portal client may reset the connection suddenly, ignore it and do not panic
+                if (errno == ECONNRESET || errno == ENOTCONN)
+                    return ESP_OK;
+
                 // Abort sending file
                 ESP_ERROR_CHECK(httpd_resp_send_chunk(request, NULL, 0));
                 ESP_ERROR_CHECK(httpd_resp_send_err(request, HTTPD_500_INTERNAL_SERVER_ERROR, NULL));
@@ -260,6 +264,25 @@ namespace server
             ESP_ERROR_CHECK(Instance->serveFile(request, FRONTEND));
 
             return ESP_OK;
+        }
+
+        // If provisioner mode is AP and there are no stored Wi-Fi credentials
+        // temporary redirect traffic to onboarding page /#/onboarding
+        if (Instance->provisioner->GetMode() == WIFI_MODE_AP)
+        {
+            provisioner::Credentials *creds = Instance->provisioner->GetCreds();
+
+            if (creds == NULL)
+            {
+                ESP_ERROR_CHECK(httpd_resp_set_hdr(request, Headers::Location, "/#/onboarding"));
+                ESP_ERROR_CHECK(httpd_resp_set_status(request, Statuses::_302));
+                // iOS requires content in the response to detect a captive portal
+                ESP_ERROR_CHECK(httpd_resp_send(request, "Redirecting to the onboarding...", HTTPD_RESP_USE_STRLEN));
+
+                return ESP_OK;
+            }
+
+            delete creds;
         }
 
         // Otherwise redirect to the frontend hash-based navigation: /#/:URI

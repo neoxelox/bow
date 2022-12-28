@@ -124,8 +124,8 @@ namespace provisioner
         // Start Wi-Fi in AP mode
         ESP_ERROR_CHECK(esp_wifi_start());
 
-        // TODO: Start captive portal DNS server
-        // capdns_start(16);
+        // Start captive portal DNS server
+        capdns_start(16);
     }
 
     void Provisioner::apStop()
@@ -133,8 +133,8 @@ namespace provisioner
         if (this->apHandle == NULL)
             return;
 
-        // TODO: Stop captive portal DNS server
-        // capdns_stop();
+        // Stop captive portal DNS server
+        capdns_stop();
 
         // Stop Wi-Fi in AP mode
         ESP_ERROR_CHECK(esp_wifi_stop());
