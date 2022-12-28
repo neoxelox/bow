@@ -143,12 +143,21 @@ namespace provisioner
         // Unregister Wi-Fi AP event callbacks
         ESP_ERROR_CHECK(esp_event_handler_instance_unregister(
             WIFI_EVENT, ESP_EVENT_ANY_ID, this->apEHInstance));
+
+        // Destroy Wi-Fi AP network interface
+        esp_netif_destroy(this->apHandle);
+
+        // Clear Wi-Fi AP handle pointer (already freed)
+        this->apHandle = NULL;
     }
 
     void Provisioner::staStart(Credentials *creds)
     {
         if (this->staHandle != NULL)
             return;
+
+        // Reset retries
+        this->staRetries = 0;
 
         // Initialize Wi-Fi in station mode
         this->staHandle = esp_netif_create_default_wifi_sta();
@@ -186,6 +195,9 @@ namespace provisioner
         if (this->staHandle == NULL)
             return;
 
+        // Signal that the disconnection is handled and retrying is not wanted
+        this->staRetries = -1;
+
         // Disconnect from the target Wi-Fi network
         ESP_ERROR_CHECK(esp_wifi_disconnect());
 
@@ -196,6 +208,12 @@ namespace provisioner
         // Unregister Wi-Fi station event callbacks
         ESP_ERROR_CHECK(esp_event_handler_instance_unregister(
             WIFI_EVENT, ESP_EVENT_ANY_ID, this->staEHInstance));
+
+        // Destroy Wi-Fi station network interface
+        esp_netif_destroy(this->staHandle);
+
+        // Clear Wi-Fi station handle pointer (already freed)
+        this->staHandle = NULL;
     }
 
     void Provisioner::apFunc(void *args, esp_event_base_t base, int32_t id, void *data)
@@ -249,6 +267,7 @@ namespace provisioner
             Instance->status->SetStatus(status::Statuses::Provisioning);
 
             // Connect to target Wi-Fi network
+            Instance->logger->Debug(TAG, "Trying to connect to the target Wi-Fi network");
             ESP_ERROR_CHECK(esp_wifi_connect());
             break;
 
@@ -268,7 +287,7 @@ namespace provisioner
             break;
 
         case WIFI_EVENT_STA_DISCONNECTED:
-            Instance->logger->Debug(TAG, "Disconnected from the target Wi-Fi network %d/%d", Instance->staRetries, STA_MAX_RETRIES);
+            Instance->logger->Debug(TAG, "Disconnected from the target Wi-Fi network");
             Instance->status->SetStatus(status::Statuses::Error);
 
             // If retried for too long switch to softAP mode fallback
@@ -283,10 +302,15 @@ namespace provisioner
             else if (Instance->staRetries > STA_MAX_RETRIES)
             {
             }
+            // If disconnection is handled retrying is not wanted
+            else if (Instance->staRetries == -1)
+            {
+            }
             // Otherwise try to reconnect to target Wi-Fi network
             else
             {
                 Instance->staRetries++;
+                Instance->logger->Debug(TAG, "Retrying to connect to the target Wi-Fi network: %d/%d", Instance->staRetries, STA_MAX_RETRIES);
                 ESP_ERROR_CHECK(esp_wifi_connect());
             }
 

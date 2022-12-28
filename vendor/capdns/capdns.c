@@ -170,6 +170,9 @@ static int parse_dns_request(char *req, size_t req_len, char *dns_reply, size_t 
 // DNS server task handle
 static TaskHandle_t dns_server_task_handle;
 
+// DNS server socket
+static int dns_server_socket;
+
 /*
     Sets up a socket and listen for DNS queries,
     replies to all type A queries with the IP of the softAP
@@ -192,15 +195,15 @@ void dns_server_task(void *pvParameters)
         ip_protocol = IPPROTO_IP;
         inet_ntoa_r(dest_addr.sin_addr, addr_str, sizeof(addr_str) - 1);
 
-        int sock = socket(addr_family, SOCK_DGRAM, ip_protocol);
-        if (sock < 0)
+        dns_server_socket = socket(addr_family, SOCK_DGRAM, ip_protocol);
+        if (dns_server_socket < 0)
         {
             ESP_LOGE(TAG, "Unable to create socket: errno %d", errno);
             break;
         }
         ESP_LOGI(TAG, "Socket created");
 
-        int err = bind(sock, (struct sockaddr *)&dest_addr, sizeof(dest_addr));
+        int err = bind(dns_server_socket, (struct sockaddr *)&dest_addr, sizeof(dest_addr));
         if (err < 0)
         {
             ESP_LOGE(TAG, "Socket unable to bind: errno %d", errno);
@@ -212,13 +215,13 @@ void dns_server_task(void *pvParameters)
             ESP_LOGI(TAG, "Waiting for data");
             struct sockaddr_in6 source_addr; // Large enough for both IPv4 or IPv6
             socklen_t socklen = sizeof(source_addr);
-            int len = recvfrom(sock, rx_buffer, sizeof(rx_buffer) - 1, 0, (struct sockaddr *)&source_addr, &socklen);
+            int len = recvfrom(dns_server_socket, rx_buffer, sizeof(rx_buffer) - 1, 0, (struct sockaddr *)&source_addr, &socklen);
 
             // Error occurred during receiving
             if (len < 0)
             {
                 ESP_LOGE(TAG, "recvfrom failed: errno %d", errno);
-                close(sock);
+                close(dns_server_socket);
                 break;
             }
             // Data received
@@ -247,7 +250,7 @@ void dns_server_task(void *pvParameters)
                 }
                 else
                 {
-                    int err = sendto(sock, reply, reply_len, 0, (struct sockaddr *)&source_addr, sizeof(source_addr));
+                    int err = sendto(dns_server_socket, reply, reply_len, 0, (struct sockaddr *)&source_addr, sizeof(source_addr));
                     if (err < 0)
                     {
                         ESP_LOGE(TAG, "Error occurred during sending: errno %d", errno);
@@ -257,11 +260,11 @@ void dns_server_task(void *pvParameters)
             }
         }
 
-        if (sock != -1)
+        if (dns_server_socket != -1)
         {
             ESP_LOGE(TAG, "Shutting down socket");
-            shutdown(sock, 0);
-            close(sock);
+            shutdown(dns_server_socket, 0);
+            close(dns_server_socket);
         }
     }
     vTaskDelete(NULL);
@@ -275,4 +278,6 @@ void capdns_start(UBaseType_t priority)
 void capdns_stop(void)
 {
     vTaskDelete(dns_server_task_handle);
+    shutdown(dns_server_socket, 0);
+    close(dns_server_socket);
 }
