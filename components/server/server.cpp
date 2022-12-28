@@ -266,32 +266,37 @@ namespace server
             return ESP_OK;
         }
 
-        // If provisioner mode is AP and there are no stored Wi-Fi credentials
-        // temporary redirect traffic to onboarding page /#/onboarding
-        if (Instance->provisioner->GetMode() == WIFI_MODE_AP)
+        char *location = NULL;
+        provisioner::Credentials *creds = Instance->provisioner->GetCreds();
+
+        // If there are no stored Wi-Fi credentials redirect to onboarding page /#/onboarding
+        if (creds == NULL)
+            ESP_ERROR_CHECK(httpd_resp_set_hdr(request, Headers::Location, "/#/onboarding"));
+        // Otherwise redirect to the frontend hash-based navigation: /#/:URI
+        else
         {
-            provisioner::Credentials *creds = Instance->provisioner->GetCreds();
-
-            if (creds == NULL)
-            {
-                ESP_ERROR_CHECK(httpd_resp_set_hdr(request, Headers::Location, "/#/onboarding"));
-                ESP_ERROR_CHECK(httpd_resp_set_status(request, Statuses::_302));
-                // iOS requires content in the response to detect a captive portal
-                ESP_ERROR_CHECK(httpd_resp_send(request, "Redirecting to the onboarding...", HTTPD_RESP_USE_STRLEN));
-
-                return ESP_OK;
-            }
-
-            delete creds;
+            location = (char *)malloc(strlen(request->uri) + 2 + 1);
+            strcpy(location, "/#");
+            ESP_ERROR_CHECK(httpd_resp_set_hdr(request, Headers::Location, strcat(location, request->uri)));
         }
 
-        // Otherwise redirect to the frontend hash-based navigation: /#/:URI
-        char location[strlen(request->uri) + 2 + 1];
-        strcpy(location, "/#");
+        delete creds;
 
-        ESP_ERROR_CHECK(httpd_resp_set_hdr(request, Headers::Location, strcat(location, request->uri)));
-        ESP_ERROR_CHECK(httpd_resp_set_status(request, Statuses::_301));
-        ESP_ERROR_CHECK(httpd_resp_send(request, NULL, 0));
+        // If provisioner mode is AP use temporary redirects with content instead
+        if (Instance->provisioner->GetMode() == WIFI_MODE_AP)
+        {
+            ESP_ERROR_CHECK(httpd_resp_set_status(request, Statuses::_302));
+            // iOS requires content in the response to detect a captive portal
+            ESP_ERROR_CHECK(httpd_resp_set_type(request, ContentTypes::TextHTML));
+            ESP_ERROR_CHECK(httpd_resp_send(request, "<h1>Redirecting to the onboarding...</h1>", HTTPD_RESP_USE_STRLEN));
+        }
+        else
+        {
+            ESP_ERROR_CHECK(httpd_resp_set_status(request, Statuses::_301));
+            ESP_ERROR_CHECK(httpd_resp_send(request, NULL, 0));
+        }
+
+        free((void *)location);
 
         return ESP_OK;
     }
