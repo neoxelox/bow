@@ -38,8 +38,6 @@ namespace server
             WIFI_EVENT, WIFI_EVENT_AP_STOP, Instance->apFunc, NULL, NULL));
         ESP_ERROR_CHECK(esp_event_handler_instance_register(
             IP_EVENT, IP_EVENT_STA_GOT_IP, Instance->ipFunc, NULL, NULL));
-        ESP_ERROR_CHECK(esp_event_handler_instance_register(
-            IP_EVENT, IP_EVENT_STA_LOST_IP, Instance->ipFunc, NULL, NULL));
 
         // Mount FAT filesystem from static partition
         esp_vfs_fat_mount_config_t cfg = {
@@ -259,12 +257,8 @@ namespace server
     void Server::ipFunc(void *args, esp_event_base_t base, int32_t id, void *data)
     {
         // Start HTTP server when IP is got
-        if (id == IP_EVENT_STA_GOT_IP)
-            Instance->start();
-
-        // Stop HTTP server when IP is lost because underlying sockets are freed
-        else // IP_EVENT_STA_LOST_IP
-            Instance->stop();
+        // IP_EVENT_STA_GOT_IP
+        Instance->start();
     }
 
     esp_err_t Server::errorHandler(httpd_req_t *request, httpd_err_code_t error)

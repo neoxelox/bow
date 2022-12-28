@@ -325,11 +325,6 @@ namespace provisioner
             Instance->status->SetStatus(status::Statuses::Idle);
             break;
 
-        case IP_EVENT_STA_LOST_IP:
-            Instance->logger->Debug(TAG, "Lost IP address");
-            Instance->status->SetStatus(status::Statuses::Error);
-            break;
-
         default:
             Instance->logger->Debug(TAG, "Unhandled IP event %d", id);
             break;

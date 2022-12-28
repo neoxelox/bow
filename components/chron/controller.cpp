@@ -47,8 +47,6 @@ namespace chron
             WIFI_EVENT, WIFI_EVENT_STA_DISCONNECTED, Instance->staFunc, NULL, NULL));
         ESP_ERROR_CHECK(esp_event_handler_instance_register(
             IP_EVENT, IP_EVENT_STA_GOT_IP, Instance->ipFunc, NULL, NULL));
-        ESP_ERROR_CHECK(esp_event_handler_instance_register(
-            IP_EVENT, IP_EVENT_STA_LOST_IP, Instance->ipFunc, NULL, NULL));
 
         // Create RTC sync task
         xTaskCreatePinnedToCore(Instance->taskFunc, "Chron", 4 * 1024, NULL, 8, &Instance->taskHandle, tskNO_AFFINITY);
@@ -114,12 +112,8 @@ namespace chron
     void Controller::ipFunc(void *args, esp_event_base_t base, int32_t id, void *data)
     {
         // Start NTP sync when IP is got
-        if (id == IP_EVENT_STA_GOT_IP)
-            Instance->start();
-
-        // Stop NTP sync when IP is lost because underlying sockets are freed
-        else // IP_EVENT_STA_LOST_IP
-            Instance->stop();
+        // IP_EVENT_STA_GOT_IP
+        Instance->start();
     }
 
     void Controller::taskFunc(void *args)
