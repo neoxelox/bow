@@ -40,12 +40,6 @@ namespace device
         return Instance;
     }
 
-    void Receiver::Wait(Packet **packet)
-    {
-        // TODO: Make other system to receive packets with multiple consumers, this will fail!
-        xQueueReceive(this->queue, packet, portMAX_DELAY);
-    }
-
     int diff(int a, int b)
     {
         return ((b - a) * 100) / (a + 1); // Avoid dividing by zero
@@ -212,7 +206,6 @@ namespace device
         return true;
     }
 
-    // TODO: makes sense having this task -> no, the packet is even deleted -> care!
     void Receiver::taskFunc(void *args)
     {
         Packet *packet;
@@ -223,6 +216,8 @@ namespace device
 
             Instance->logger->Debug(TAG, "Rx | Data: %s | Protocol: %d", packet->Data, packet->ProtocolID);
             Instance->status->SetStatus(status::Statuses::Received);
+
+            // TODO: Save data if sensor in database
 
             delete packet;
         }

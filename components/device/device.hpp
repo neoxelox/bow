@@ -97,9 +97,6 @@ namespace device
     public:
         inline static Receiver *Instance;
         static Receiver *New(logger::Logger *logger, status::Controller *status);
-
-    public:
-        void Wait(Packet **packet);
     };
 
     class Transmitter
