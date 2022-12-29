@@ -22,14 +22,8 @@ namespace server
 
     static const uint16_t PORT = 80;
     static const uint16_t MAX_CLIENTS = 5;
+    static const uint32_t MAX_REQUEST_HEADER_SIZE = 128;
     static const uint32_t MAX_REQUEST_CONTENT_SIZE = 1024;
-
-    namespace Errors
-    {
-        static const char *InvalidRequest = "ERR_INVALID_REQUEST";
-        static const char *NotFound = "ERR_NOT_FOUND";
-        static const char *ServerGeneric = "ERR_SERVER_GENERIC";
-    }
 
     namespace Methods
     {
@@ -46,6 +40,8 @@ namespace server
         static const char *_301 = "301 Moved Permanently";
         static const char *_302 = "302 Temporary Redirect";
         static const char *_400 = "400 Bad Request";
+        static const char *_401 = "401 Unauthorized";
+        static const char *_403 = "403 Forbidden";
         static const char *_404 = "404 Not Found";
         static const char *_500 = "500 Internal Server Error";
     }
@@ -68,6 +64,23 @@ namespace server
         static const char *CacheControl = "Cache-Control";
         static const char *ContentEncoding = "Content-Encoding";
         static const char *Connection = "Connection";
+        static const char *Authorization = "Authorization";
+    }
+
+    class Error
+    {
+    public:
+        const char *Code;
+        const char *Status;
+    };
+
+    namespace Errors
+    {
+        static const Error InvalidRequest = {"ERR_INVALID_REQUEST", Statuses::_400};
+        static const Error Unauthorized = {"ERR_UNAUTHORIZED", Statuses::_401};
+        static const Error NotPermission = {"ERR_NOT_PERMISSION", Statuses::_403};
+        static const Error NotFound = {"ERR_NOT_FOUND", Statuses::_404};
+        static const Error ServerGeneric = {"ERR_SERVER_GENERIC", Statuses::_500};
     }
 
     class Server
@@ -85,14 +98,16 @@ namespace server
         httpd_uri_t frontURIHandler = {"/*", Methods::GET, frontHandler};
         httpd_uri_t apiPostRegisterURIHandler = {"/api/register", Methods::POST, apiPostRegisterHandler};
         httpd_uri_t apiPostLoginURIHandler = {"/api/login", Methods::POST, apiPostLoginHandler};
+        httpd_uri_t apiGetUsersURIHandler = {"/api/users", Methods::GET, apiGetUsersHandler};
 
     private:
         void start();
         void stop();
         esp_err_t sendFile(httpd_req_t *request, const char *path, const char *status);
         esp_err_t sendJSON(httpd_req_t *request, cJSON *json, const char *status);
-        esp_err_t sendError(httpd_req_t *request, const char *message);
+        esp_err_t sendError(httpd_req_t *request, Error error, const char *message);
         esp_err_t recvJSON(httpd_req_t *request, cJSON **json);
+        user::User *checkToken(httpd_req_t *request);
         static void apFunc(void *args, esp_event_base_t base, int32_t id, void *data);
         static void staFunc(void *args, esp_event_base_t base, int32_t id, void *data);
         static void ipFunc(void *args, esp_event_base_t base, int32_t id, void *data);
@@ -100,6 +115,7 @@ namespace server
         static esp_err_t frontHandler(httpd_req_t *request);
         static esp_err_t apiPostRegisterHandler(httpd_req_t *request);
         static esp_err_t apiPostLoginHandler(httpd_req_t *request);
+        static esp_err_t apiGetUsersHandler(httpd_req_t *request);
 
     public:
         inline static Server *Instance;

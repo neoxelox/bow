@@ -44,7 +44,9 @@
     "memory_resource": "c",
     "unordered_map": "cpp",
     "future": "cpp",
-    "algorithm": "cpp"
+    "algorithm": "cpp",
+    "esp_tls_crypto.h": "c",
+    "cstring": "cpp"
   },
   "idf.port": "/dev/ttyACM0",
   "idf.flashType": "JTAG"

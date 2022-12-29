@@ -90,6 +90,7 @@ namespace database
 
         uint32_t size;
 
+        // Size includes the zero-terminator
         err = nvs_get_str(this->handle, key, NULL, (size_t *)&size);
         if (err == ESP_ERR_NVS_NOT_FOUND)
             return ESP_OK;

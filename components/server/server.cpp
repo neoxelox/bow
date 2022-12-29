@@ -110,6 +110,7 @@ namespace server
         // Register api handlers
         ESP_ERROR_CHECK(httpd_register_uri_handler(this->espServer, &this->apiPostRegisterURIHandler));
         ESP_ERROR_CHECK(httpd_register_uri_handler(this->espServer, &this->apiPostLoginURIHandler));
+        ESP_ERROR_CHECK(httpd_register_uri_handler(this->espServer, &this->apiGetUsersURIHandler));
 
         // Register frontend handler, note that it has to be the last one to catch all other URLs
         ESP_ERROR_CHECK(httpd_register_uri_handler(this->espServer, &this->frontURIHandler));
@@ -217,17 +218,17 @@ namespace server
         return ESP_OK;
     }
 
-    esp_err_t Server::sendError(httpd_req_t *request, const char *message)
+    esp_err_t Server::sendError(httpd_req_t *request, Error error, const char *message)
     {
         esp_err_t err;
 
         cJSON *root = cJSON_CreateObject();
 
-        cJSON_AddStringToObject(root, "error", Errors::InvalidRequest);
+        cJSON_AddStringToObject(root, "code", error.Code);
         if (message != NULL)
             cJSON_AddStringToObject(root, "message", message);
 
-        err = Instance->sendJSON(request, root, Statuses::_400);
+        err = Instance->sendJSON(request, root, error.Status);
         cJSON_Delete(root);
         if (err != ESP_OK)
             return err;
@@ -271,6 +272,49 @@ namespace server
         return ESP_OK;
     }
 
+    user::User *Server::checkToken(httpd_req_t *request)
+    {
+        user::User *user = NULL;
+
+        char header[MAX_REQUEST_HEADER_SIZE + 1];
+
+        uint32_t size = httpd_req_get_hdr_value_len(request, Headers::Authorization);
+
+        // Check if request headers fits in header buffer
+        if (size > MAX_REQUEST_HEADER_SIZE)
+            return NULL;
+
+        // Authorization header should be present and at least user::TOKEN_SIZE
+        if (size < user::TOKEN_SIZE)
+            return NULL;
+
+        // Read Authorization header
+        ESP_ERROR_CHECK(httpd_req_get_hdr_value_str(request, Headers::Authorization, header, size + 1));
+
+        // Search for name:token delimiter
+        char *del = strchr(header, ':');
+
+        // Replace delimiter with NULL to split the header
+        *del = '\0';
+
+        char *token = del + 1;
+        char *name = header;
+
+        // Get user
+        user = Instance->user->Get(name);
+        if (user == NULL)
+            return NULL;
+
+        // Check if tokens match
+        if (strcmp(token, user->Token))
+        {
+            delete user;
+            return NULL;
+        }
+
+        return user;
+    }
+
     void Server::apFunc(void *args, esp_event_base_t base, int32_t id, void *data)
     {
         // Start HTTP server when Wi-Fi softAP has started
@@ -304,18 +348,18 @@ namespace server
         switch (error)
         {
         case HTTPD_400_BAD_REQUEST:
-            status = Statuses::_400;
-            cJSON_AddStringToObject(root, "code", Errors::InvalidRequest);
+            status = Errors::InvalidRequest.Status;
+            cJSON_AddStringToObject(root, "code", Errors::InvalidRequest.Code);
             break;
 
         case HTTPD_404_NOT_FOUND:
-            status = Statuses::_404;
-            cJSON_AddStringToObject(root, "code", Errors::NotFound);
+            status = Errors::NotFound.Status;
+            cJSON_AddStringToObject(root, "code", Errors::NotFound.Code);
             break;
 
         default:
-            status = Statuses::_500;
-            cJSON_AddStringToObject(root, "code", Errors::ServerGeneric);
+            status = Errors::ServerGeneric.Status;
+            cJSON_AddStringToObject(root, "code", Errors::ServerGeneric.Code);
             break;
         }
 
@@ -417,7 +461,7 @@ namespace server
         {
             cJSON_Delete(reqJSON);
             delete exUser;
-            ESP_ERROR_CHECK(Instance->sendError(request, "User already exists"));
+            ESP_ERROR_CHECK(Instance->sendError(request, Errors::InvalidRequest, "User already exists"));
             return ESP_FAIL;
         }
 
@@ -458,7 +502,7 @@ namespace server
         if (user == NULL)
         {
             cJSON_Delete(reqJSON);
-            ESP_ERROR_CHECK(Instance->sendError(request, "User doesn't exist"));
+            ESP_ERROR_CHECK(Instance->sendError(request, Errors::InvalidRequest, "User doesn't exist"));
             return ESP_FAIL;
         }
 
@@ -467,7 +511,7 @@ namespace server
         {
             cJSON_Delete(reqJSON);
             delete user;
-            ESP_ERROR_CHECK(Instance->sendError(request, "Passwords don't match"));
+            ESP_ERROR_CHECK(Instance->sendError(request, Errors::InvalidRequest, "Passwords don't match"));
             return ESP_FAIL;
         }
 
@@ -485,6 +529,26 @@ namespace server
         // Send response JSON
         cJSON *resJSON = user->JSON();
         delete user;
+        cJSON_DeleteItemFromObject(resJSON, "password");
+        ESP_ERROR_CHECK(Instance->sendJSON(request, resJSON, Statuses::_200));
+        cJSON_Delete(resJSON);
+
+        return ESP_OK;
+    }
+
+    esp_err_t Server::apiGetUsersHandler(httpd_req_t *request)
+    {
+        // Authenticate request user
+        user::User *reqUser = Instance->checkToken(request);
+        if (reqUser == NULL)
+        {
+            ESP_ERROR_CHECK(Instance->sendError(request, Errors::Unauthorized, NULL));
+            return ESP_FAIL;
+        }
+
+        // Send response JSON
+        cJSON *resJSON = reqUser->JSON();
+        delete reqUser;
         cJSON_DeleteItemFromObject(resJSON, "password");
         ESP_ERROR_CHECK(Instance->sendJSON(request, resJSON, Statuses::_200));
         cJSON_Delete(resJSON);
