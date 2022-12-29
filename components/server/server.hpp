@@ -84,6 +84,7 @@ namespace server
         wl_handle_t fsHandle;
         httpd_uri_t frontURIHandler = {"/*", Methods::GET, frontHandler};
         httpd_uri_t apiPostRegisterURIHandler = {"/api/register", Methods::POST, apiPostRegisterHandler};
+        httpd_uri_t apiPostLoginURIHandler = {"/api/login", Methods::POST, apiPostLoginHandler};
 
     private:
         void start();
@@ -98,6 +99,7 @@ namespace server
         static esp_err_t errorHandler(httpd_req_t *request, httpd_err_code_t error);
         static esp_err_t frontHandler(httpd_req_t *request);
         static esp_err_t apiPostRegisterHandler(httpd_req_t *request);
+        static esp_err_t apiPostLoginHandler(httpd_req_t *request);
 
     public:
         inline static Server *Instance;

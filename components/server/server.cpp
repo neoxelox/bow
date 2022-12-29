@@ -109,6 +109,7 @@ namespace server
 
         // Register api handlers
         ESP_ERROR_CHECK(httpd_register_uri_handler(this->espServer, &this->apiPostRegisterURIHandler));
+        ESP_ERROR_CHECK(httpd_register_uri_handler(this->espServer, &this->apiPostLoginURIHandler));
 
         // Register frontend handler, note that it has to be the last one to catch all other URLs
         ESP_ERROR_CHECK(httpd_register_uri_handler(this->espServer, &this->frontURIHandler));
@@ -414,12 +415,13 @@ namespace server
         user::User *exUser = Instance->user->Get(cJSON_GetObjectItem(reqJSON, "name")->valuestring);
         if (exUser != NULL)
         {
+            cJSON_Delete(reqJSON);
             delete exUser;
             ESP_ERROR_CHECK(Instance->sendError(request, "User already exists"));
             return ESP_FAIL;
         }
-        delete exUser;
 
+        // Generate new authentication token
         char token[user::TOKEN_SIZE + 1];
         Instance->user->GenerateToken(token);
 
@@ -438,6 +440,51 @@ namespace server
 
         // Send response JSON
         cJSON *resJSON = newUser.JSON();
+        cJSON_DeleteItemFromObject(resJSON, "password");
+        ESP_ERROR_CHECK(Instance->sendJSON(request, resJSON, Statuses::_200));
+        cJSON_Delete(resJSON);
+
+        return ESP_OK;
+    }
+
+    esp_err_t Server::apiPostLoginHandler(httpd_req_t *request)
+    {
+        // Bind request JSON
+        cJSON *reqJSON = NULL;
+        ESP_ERROR_CHECK(Instance->recvJSON(request, &reqJSON));
+
+        // Get user
+        user::User *user = Instance->user->Get(cJSON_GetObjectItem(reqJSON, "name")->valuestring);
+        if (user == NULL)
+        {
+            cJSON_Delete(reqJSON);
+            ESP_ERROR_CHECK(Instance->sendError(request, "User doesn't exist"));
+            return ESP_FAIL;
+        }
+
+        // Check if passwords match
+        if (strcmp(cJSON_GetObjectItem(reqJSON, "password")->valuestring, user->Password))
+        {
+            cJSON_Delete(reqJSON);
+            delete user;
+            ESP_ERROR_CHECK(Instance->sendError(request, "Passwords don't match"));
+            return ESP_FAIL;
+        }
+
+        cJSON_Delete(reqJSON);
+
+        // Generate new authentication token
+        char token[user::TOKEN_SIZE + 1];
+        Instance->user->GenerateToken(token);
+        free((void *)user->Token);
+        user->Token = strdup(token);
+
+        // Save user
+        Instance->user->Set(user);
+
+        // Send response JSON
+        cJSON *resJSON = user->JSON();
+        delete user;
         cJSON_DeleteItemFromObject(resJSON, "password");
         ESP_ERROR_CHECK(Instance->sendJSON(request, resJSON, Statuses::_200));
         cJSON_Delete(resJSON);
