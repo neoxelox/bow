@@ -75,11 +75,17 @@ namespace database
     {
         esp_err_t err;
 
-        err = nvs_get_used_entry_count(this->handle, (size_t *)count);
+        *count = 0;
+
+        err = this->Find(
+            [](const char *key, void *context) -> bool
+            {
+                (*(uint32_t *)context)++;
+                return false;
+            },
+            count);
         if (err != ESP_OK)
             return err;
-
-        // The namespace name takes one extra entry but I ignore it
 
         return ESP_OK;
     }
