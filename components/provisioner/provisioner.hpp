@@ -14,14 +14,14 @@ namespace provisioner
     static const char *TAG = "provisioner";
 
     static const char *DB_NAMESPACE = "system";
-    static const TickType_t STARTUP_DELAY = (5 * 1000) / portTICK_PERIOD_MS;     // 5 seconds
-    static const TickType_t RETRY_PERIOD = (5 * 60 * 1000) / portTICK_PERIOD_MS; // 5 minutes
+    static const TickType_t STARTUP_DELAY = (5 * 1000) / portTICK_PERIOD_MS; // 5 seconds
 
     static const char *AP_SSID = "Diana Dot";
     static const char *AP_PASSWORD = "Y6LBBSMA";
     static const uint8_t AP_MAX_CLIENTS = 5;
 
     static const uint8_t STA_MAX_RETRIES = 10;
+    static const TickType_t STA_RETRY_PERIOD = (5 * 60 * 1000) / portTICK_PERIOD_MS; // 5 minutes
 
     class Credentials
     {

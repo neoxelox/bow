@@ -73,6 +73,14 @@ namespace chron
         this->tv_to_tm(&src, dst);
     }
 
+    time_t Controller::Now()
+    {
+        struct timeval src;
+        gettimeofday(&src, NULL);
+
+        return src.tv_sec;
+    }
+
     void Controller::start()
     {
         if (sntp_enabled())

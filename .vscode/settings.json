@@ -43,7 +43,8 @@
     "tuple": "cpp",
     "memory_resource": "c",
     "unordered_map": "cpp",
-    "future": "cpp"
+    "future": "cpp",
+    "algorithm": "cpp"
   },
   "idf.port": "/dev/ttyACM0",
   "idf.flashType": "JTAG"

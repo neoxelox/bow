@@ -86,7 +86,7 @@ namespace provisioner
         ESP_ERROR_CHECK(esp_wifi_init(&cfg));
         ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_NULL));
 
-        // Create provisioner delayed startup task and Wi-Fi retrier
+        // Create provisioner delayed startup task and Wi-Fi station retrier
         xTaskCreatePinnedToCore(Instance->taskFunc, "Provisioner", 4 * 1024, NULL, 11, &Instance->taskHandle, tskNO_AFFINITY);
 
         return Instance;
@@ -357,41 +357,49 @@ namespace provisioner
 
     void Provisioner::taskFunc(void *args)
     {
-        wifi_mode_t mode;
         Credentials *creds = NULL;
 
         // Delay provisioner startup to let the other components initialize first
         vTaskDelay(STARTUP_DELAY);
 
+        // Get stored Wi-Fi credentials
+        creds = Instance->GetCreds();
+
+        // Start in station mode if credentials exists
+        if (creds != NULL)
+        {
+            Instance->logger->Debug(TAG, "Wi-Fi credentials found");
+            Instance->logger->Debug(TAG, "Starting in station mode: {\"ssid\":\"%s\",\"password\":\"%s\"}", creds->SSID, creds->Password);
+            Instance->staStart(creds);
+        }
+        // Start in softAP mode if credentials don't exist
+        else
+        {
+            Instance->logger->Debug(TAG, "Wi-Fi credentials not found");
+            Instance->logger->Debug(TAG, "Starting in softAP mode: {\"ssid\":\"%s\",\"password\":\"%s\"}", AP_SSID, AP_PASSWORD);
+            creds = new Credentials(AP_SSID, AP_PASSWORD);
+            Instance->apStart(creds);
+        }
+
+        delete creds;
+
         while (1)
         {
-            // Get current Wi-Fi mode
-            mode = Instance->GetMode();
+            vTaskDelay(STA_RETRY_PERIOD);
 
             // Get stored Wi-Fi credentials
             creds = Instance->GetCreds();
 
-            // Go into station mode if credentials exists and Wi-Fi is not station
-            if (creds != NULL && mode != WIFI_MODE_STA)
+            // Go into station mode if credentials exists and Wi-Fi is not already station
+            if (creds != NULL && Instance->GetMode() != WIFI_MODE_STA)
             {
                 Instance->logger->Debug(TAG, "Wi-Fi credentials found");
                 Instance->logger->Debug(TAG, "Going into station mode: {\"ssid\":\"%s\",\"password\":\"%s\"}", creds->SSID, creds->Password);
                 Instance->apStop();
                 Instance->staStart(creds);
             }
-            // Go into softAP mode if credentials don't exist and Wi-Fi is not softAP
-            else if (mode != WIFI_MODE_AP)
-            {
-                Instance->logger->Debug(TAG, "Wi-Fi credentials not found");
-                Instance->logger->Debug(TAG, "Going into softAP mode: {\"ssid\":\"%s\",\"password\":\"%s\"}", AP_SSID, AP_PASSWORD);
-                Instance->staStop();
-                creds = new Credentials(AP_SSID, AP_PASSWORD);
-                Instance->apStart(creds);
-            }
 
             delete creds;
-
-            vTaskDelay(RETRY_PERIOD);
         }
     }
 

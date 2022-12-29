@@ -2,12 +2,13 @@
 #include "esp_app_desc.h"
 #include "esp_timer.h"
 #include "logger.hpp"
+#include "database.hpp"
 #include "device.hpp"
 #include "status.hpp"
 #include "chron.hpp"
 #include "provisioner.hpp"
 #include "server.hpp"
-#include "database.hpp"
+#include "user.hpp"
 
 // TODO: Only for debug, remove
 #include <string.h>
@@ -30,6 +31,7 @@ namespace main
         status::Controller *status;
         chron::Controller *chron;
         provisioner::Provisioner *provisioner;
+        user::Controller *user;
         server::Server *server;
 
     public:
@@ -53,7 +55,10 @@ namespace main
             Instance->chron = chron::Controller::New(Instance->logger, Instance->provisioner);
             Instance->receiver = device::Receiver::New(Instance->logger, Instance->status);
             Instance->transmitter = device::Transmitter::New(Instance->logger, Instance->status);
-            Instance->server = server::Server::New(Instance->logger, Instance->provisioner);
+            Instance->user = user::Controller::New(Instance->logger, Instance->database);
+            Instance->server = server::Server::New(Instance->logger, Instance->database, Instance->provisioner,
+                                                   Instance->chron, Instance->transmitter, Instance->receiver,
+                                                   Instance->user);
 
             elapsed = esp_timer_get_time() - elapsed;
             Instance->logger->Info(TAG, "Startup took %f ms", (float)(elapsed / 1000.0l));

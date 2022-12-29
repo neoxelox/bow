@@ -11,12 +11,18 @@
 #include "cJSON.h"
 #include "esp_vfs_fat.h"
 #include "logger.hpp"
+#include "database.hpp"
 #include "provisioner.hpp"
+#include "chron.hpp"
+#include "device.hpp"
+#include "user.hpp"
 #include "server.hpp"
 
 namespace server
 {
-    Server *Server::New(logger::Logger *logger, provisioner::Provisioner *provisioner)
+    Server *Server::New(logger::Logger *logger, database::Database *database, provisioner::Provisioner *provisioner,
+                        chron::Controller *chron, device::Transmitter *transmitter, device::Receiver *receiver,
+                        user::Controller *user)
     {
         if (Instance != NULL)
             return Instance;
@@ -25,7 +31,12 @@ namespace server
 
         // Inject dependencies
         Instance->logger = logger;
+        Instance->database = database;
         Instance->provisioner = provisioner;
+        Instance->chron = chron;
+        Instance->transmitter = transmitter;
+        Instance->receiver = receiver;
+        Instance->user = user;
 
         Instance->espServer = NULL;
 
@@ -46,6 +57,11 @@ namespace server
             .allocation_unit_size = CONFIG_WL_SECTOR_SIZE,
         };
         ESP_ERROR_CHECK(esp_vfs_fat_spiflash_mount_rw_wl(ROOT, PARTITION, &cfg, &Instance->fsHandle));
+
+        // Increase HTTPD log level, is too verbose
+        esp_log_level_set("httpd_uri", ESP_LOG_ERROR);
+        esp_log_level_set("httpd_txrx", ESP_LOG_ERROR);
+        esp_log_level_set("httpd_parse", ESP_LOG_ERROR);
 
         return Instance;
     }
@@ -194,6 +210,24 @@ namespace server
         const char *body = cJSON_PrintUnformatted(json);
         err = httpd_resp_send(request, body, HTTPD_RESP_USE_STRLEN);
         free((void *)body);
+        if (err != ESP_OK)
+            return err;
+
+        return ESP_OK;
+    }
+
+    esp_err_t Server::sendError(httpd_req_t *request, const char *message)
+    {
+        esp_err_t err;
+
+        cJSON *root = cJSON_CreateObject();
+
+        cJSON_AddStringToObject(root, "error", Errors::InvalidRequest);
+        if (message != NULL)
+            cJSON_AddStringToObject(root, "message", message);
+
+        err = Instance->sendJSON(request, root, Statuses::_400);
+        cJSON_Delete(root);
         if (err != ESP_OK)
             return err;
 
@@ -372,16 +406,41 @@ namespace server
 
     esp_err_t Server::apiPostRegisterHandler(httpd_req_t *request)
     {
-        // esp_hw_support esp_random
-
+        // Bind request JSON
         cJSON *reqJSON = NULL;
         ESP_ERROR_CHECK(Instance->recvJSON(request, &reqJSON));
 
-        cJSON_AddNumberToObject(reqJSON, "challenge", 69);
+        // Check if a user with the same name already exists
+        user::User *exUser = Instance->user->Get(cJSON_GetObjectItem(reqJSON, "name")->valuestring);
+        if (exUser != NULL)
+        {
+            delete exUser;
+            ESP_ERROR_CHECK(Instance->sendError(request, "User already exists"));
+            return ESP_FAIL;
+        }
+        delete exUser;
 
-        ESP_ERROR_CHECK(Instance->sendJSON(request, reqJSON, Statuses::_200));
+        char token[user::TOKEN_SIZE + 1];
+        Instance->user->GenerateToken(token);
+
+        // Create the new user
+        user::User newUser(
+            cJSON_GetObjectItem(reqJSON, "name")->valuestring,
+            cJSON_GetObjectItem(reqJSON, "password")->valuestring,
+            token,
+            Instance->user->Count() > 0 ? "MEMBER" : "ADMIN", // TODO: Get default system roles from role component
+            cJSON_GetObjectItem(reqJSON, "emoji")->valuestring,
+            Instance->chron->Now());
 
         cJSON_Delete(reqJSON);
+
+        Instance->user->Set(&newUser);
+
+        // Send response JSON
+        cJSON *resJSON = newUser.JSON();
+        cJSON_DeleteItemFromObject(resJSON, "password");
+        ESP_ERROR_CHECK(Instance->sendJSON(request, resJSON, Statuses::_200));
+        cJSON_Delete(resJSON);
 
         return ESP_OK;
     }

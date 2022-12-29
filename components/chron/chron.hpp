@@ -40,5 +40,6 @@ namespace chron
 
     public:
         void Now(struct tm *dst);
+        time_t Now();
     };
 }

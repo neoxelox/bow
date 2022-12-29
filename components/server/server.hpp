@@ -6,7 +6,11 @@
 #include "esp_vfs_fat.h"
 #include "cJSON.h"
 #include "logger.hpp"
+#include "database.hpp"
 #include "provisioner.hpp"
+#include "chron.hpp"
+#include "device.hpp"
+#include "user.hpp"
 
 namespace server
 {
@@ -70,7 +74,12 @@ namespace server
     {
     private:
         logger::Logger *logger;
+        database::Database *database;
         provisioner::Provisioner *provisioner;
+        chron::Controller *chron;
+        device::Transmitter *transmitter;
+        device::Receiver *receiver;
+        user::Controller *user;
         httpd_handle_t espServer;
         wl_handle_t fsHandle;
         httpd_uri_t frontURIHandler = {"/*", Methods::GET, frontHandler};
@@ -81,6 +90,7 @@ namespace server
         void stop();
         esp_err_t sendFile(httpd_req_t *request, const char *path, const char *status);
         esp_err_t sendJSON(httpd_req_t *request, cJSON *json, const char *status);
+        esp_err_t sendError(httpd_req_t *request, const char *message);
         esp_err_t recvJSON(httpd_req_t *request, cJSON **json);
         static void apFunc(void *args, esp_event_base_t base, int32_t id, void *data);
         static void staFunc(void *args, esp_event_base_t base, int32_t id, void *data);
@@ -91,6 +101,8 @@ namespace server
 
     public:
         inline static Server *Instance;
-        static Server *New(logger::Logger *logger, provisioner::Provisioner *provisioner);
+        static Server *New(logger::Logger *logger, database::Database *database, provisioner::Provisioner *provisioner,
+                           chron::Controller *chron, device::Transmitter *transmitter, device::Receiver *receiver,
+                           user::Controller *user);
     };
 }
