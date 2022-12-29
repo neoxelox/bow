@@ -24,8 +24,8 @@ namespace user
 
     public:
         User();
-        User(const char *Name, const char *Password, const char *Token,
-             const char *Role, const char *Emoji, time_t CreatedAt);
+        User(const char *name, const char *password, const char *token,
+             const char *role, const char *emoji, time_t createdAt);
         User(cJSON *src);
         ~User();
         User &operator=(const User &other);

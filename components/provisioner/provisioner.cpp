@@ -24,10 +24,10 @@ namespace provisioner
         this->Password = NULL;
     }
 
-    Credentials::Credentials(const char *SSID, const char *Password)
+    Credentials::Credentials(const char *ssid, const char *password)
     {
-        this->SSID = strdup(SSID);
-        this->Password = strdup(Password);
+        this->SSID = strdup(ssid);
+        this->Password = strdup(password);
     }
 
     Credentials::Credentials(cJSON *src)

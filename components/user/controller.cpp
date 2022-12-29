@@ -18,15 +18,15 @@ namespace user
         this->CreatedAt = 0;
     }
 
-    User::User(const char *Name, const char *Password, const char *Token,
-               const char *Role, const char *Emoji, time_t CreatedAt)
+    User::User(const char *name, const char *password, const char *token,
+               const char *role, const char *emoji, time_t createdAt)
     {
-        this->Name = strdup(Name);
-        this->Password = strdup(Password);
-        this->Token = strdup(Token);
-        this->Role = strdup(Role);
-        this->Emoji = strdup(Emoji);
-        this->CreatedAt = CreatedAt;
+        this->Name = strdup(name);
+        this->Password = strdup(password);
+        this->Token = strdup(token);
+        this->Role = strdup(role);
+        this->Emoji = strdup(emoji);
+        this->CreatedAt = createdAt;
     }
 
     User::User(cJSON *src)
