@@ -95,7 +95,7 @@ namespace server
         user::Controller *user;
         httpd_handle_t espServer;
         wl_handle_t fsHandle;
-        httpd_uri_t frontURIHandler = {"/*", Methods::GET, frontHandler};
+        httpd_uri_t frontURIHandler = {"/?*", Methods::GET, frontHandler};
         httpd_uri_t apiPostRegisterURIHandler = {"/api/register", Methods::POST, apiPostRegisterHandler};
         httpd_uri_t apiPostLoginURIHandler = {"/api/login", Methods::POST, apiPostLoginHandler};
         httpd_uri_t apiGetUsersURIHandler = {"/api/users", Methods::GET, apiGetUsersHandler};

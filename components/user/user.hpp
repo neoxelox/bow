@@ -23,10 +23,12 @@ namespace user
         time_t CreatedAt;
 
     public:
-        ~User();
+        User();
         User(const char *Name, const char *Password, const char *Token,
              const char *Role, const char *Emoji, time_t CreatedAt);
         User(cJSON *src);
+        ~User();
+        User &operator=(const User &other);
         cJSON *JSON();
     };
 
@@ -43,6 +45,7 @@ namespace user
     public:
         uint32_t Count();
         User *Get(const char *name);
+        User *List(uint32_t *size);
         void Set(User *user);
         void Delete(const char *name);
         void Drop();

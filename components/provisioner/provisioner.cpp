@@ -18,6 +18,12 @@
 
 namespace provisioner
 {
+    Credentials::Credentials()
+    {
+        this->SSID = NULL;
+        this->Password = NULL;
+    }
+
     Credentials::Credentials(const char *SSID, const char *Password)
     {
         this->SSID = strdup(SSID);
@@ -34,6 +40,20 @@ namespace provisioner
     {
         free((void *)this->SSID);
         free((void *)this->Password);
+    }
+
+    Credentials &Credentials::operator=(const Credentials &other)
+    {
+        if (this == &other)
+            return *this;
+
+        free((void *)this->SSID);
+        free((void *)this->Password);
+
+        this->SSID = strdup(other.SSID);
+        this->Password = strdup(other.Password);
+
+        return *this;
     }
 
     cJSON *Credentials::JSON()

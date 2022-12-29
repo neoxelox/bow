@@ -30,9 +30,11 @@ namespace provisioner
         const char *Password;
 
     public:
-        ~Credentials();
+        Credentials();
         Credentials(const char *SSID, const char *Password);
         Credentials(cJSON *src);
+        ~Credentials();
+        Credentials &operator=(const Credentials &other);
         cJSON *JSON();
     };
 

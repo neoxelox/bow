@@ -546,10 +546,26 @@ namespace server
             return ESP_FAIL;
         }
 
-        // Send response JSON
-        cJSON *resJSON = reqUser->JSON();
         delete reqUser;
-        cJSON_DeleteItemFromObject(resJSON, "password");
+
+        // Get all users
+        uint32_t size;
+        user::User *list = Instance->user->List(&size);
+
+        // Send response JSON
+        cJSON *resJSON = cJSON_CreateObject();
+        cJSON *usersJSON = cJSON_AddArrayToObject(resJSON, "users");
+
+        for (int i = 0; i < size; i++)
+        {
+            cJSON *userJSON = list[i].JSON();
+            cJSON_DeleteItemFromObject(userJSON, "password");
+            cJSON_DeleteItemFromObject(userJSON, "token");
+            cJSON_AddItemToArray(usersJSON, userJSON);
+        }
+
+        delete[] list;
+
         ESP_ERROR_CHECK(Instance->sendJSON(request, resJSON, Statuses::_200));
         cJSON_Delete(resJSON);
 

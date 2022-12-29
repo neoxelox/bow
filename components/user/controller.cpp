@@ -8,6 +8,16 @@
 
 namespace user
 {
+    User::User()
+    {
+        this->Name = NULL;
+        this->Password = NULL;
+        this->Token = NULL;
+        this->Role = NULL;
+        this->Emoji = NULL;
+        this->CreatedAt = 0;
+    }
+
     User::User(const char *Name, const char *Password, const char *Token,
                const char *Role, const char *Emoji, time_t CreatedAt)
     {
@@ -36,6 +46,27 @@ namespace user
         free((void *)this->Token);
         free((void *)this->Role);
         free((void *)this->Emoji);
+    }
+
+    User &User::operator=(const User &other)
+    {
+        if (this == &other)
+            return *this;
+
+        free((void *)this->Name);
+        free((void *)this->Password);
+        free((void *)this->Token);
+        free((void *)this->Role);
+        free((void *)this->Emoji);
+
+        this->Name = strdup(other.Name);
+        this->Password = strdup(other.Password);
+        this->Token = strdup(other.Token);
+        this->Role = strdup(other.Role);
+        this->Emoji = strdup(other.Emoji);
+        this->CreatedAt = other.CreatedAt;
+
+        return *this;
     }
 
     cJSON *User::JSON()
@@ -70,7 +101,7 @@ namespace user
     {
         uint32_t count;
 
-        ESP_ERROR_CHECK(db->Count(&count));
+        ESP_ERROR_CHECK(this->db->Count(&count));
 
         return count;
     }
@@ -80,7 +111,7 @@ namespace user
         User *user = NULL;
 
         cJSON *userJSON = NULL;
-        ESP_ERROR_CHECK(Instance->db->Get(name, &userJSON));
+        ESP_ERROR_CHECK(this->db->Get(name, &userJSON));
 
         if (userJSON != NULL)
             user = new User(userJSON);
@@ -90,21 +121,50 @@ namespace user
         return user;
     }
 
+    User *Controller::List(uint32_t *size)
+    {
+        uint32_t count = this->Count();
+        *size = count;
+        if (count < 1)
+            return NULL;
+
+        User *list = new User[count];
+        User *aux = list;
+
+        ESP_ERROR_CHECK(this->db->Find(
+            [](const char *key, void *context) -> bool
+            {
+                User *list = *(User **)context;
+
+                cJSON *userJSON = NULL;
+                ESP_ERROR_CHECK(Instance->db->Get(key, &userJSON));
+
+                *list = User(userJSON);
+                (*(User **)context)++;
+
+                cJSON_Delete(userJSON);
+                return false;
+            },
+            &aux));
+
+        return list;
+    }
+
     void Controller::Set(User *user)
     {
         cJSON *userJSON = user->JSON();
-        ESP_ERROR_CHECK(db->Set(user->Name, userJSON));
+        ESP_ERROR_CHECK(this->db->Set(user->Name, userJSON));
         cJSON_Delete(userJSON);
     }
 
     void Controller::Delete(const char *name)
     {
-        ESP_ERROR_CHECK(db->Delete(name));
+        ESP_ERROR_CHECK(this->db->Delete(name));
     }
 
     void Controller::Drop()
     {
-        ESP_ERROR_CHECK(db->Drop());
+        ESP_ERROR_CHECK(this->db->Drop());
     }
 
     void Controller::GenerateToken(char *token)
