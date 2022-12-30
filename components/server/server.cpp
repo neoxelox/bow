@@ -118,6 +118,7 @@ namespace server
         ESP_ERROR_CHECK(httpd_register_uri_handler(this->espServer, &this->apiPostLoginURIHandler));
         ESP_ERROR_CHECK(httpd_register_uri_handler(this->espServer, &this->apiGetUsersURIHandler));
         ESP_ERROR_CHECK(httpd_register_uri_handler(this->espServer, &this->apiGetUserURIHandler));
+        ESP_ERROR_CHECK(httpd_register_uri_handler(this->espServer, &this->apiPutUserURIHandler));
 
         // Register frontend handler, note that it has to be the last one to catch all other URLs
         ESP_ERROR_CHECK(httpd_register_uri_handler(this->espServer, &this->frontURIHandler));
@@ -487,7 +488,7 @@ namespace server
             cJSON_GetObjectItem(reqJSON, "name")->valuestring,
             cJSON_GetObjectItem(reqJSON, "password")->valuestring,
             token,
-            Instance->user->Count() > 0 ? role::System::Guest.Name : role::System::Admin.Name,
+            Instance->user->Count() > 1 ? role::System::Guest.Name : role::System::Admin.Name,
             cJSON_GetObjectItem(reqJSON, "emoji")->valuestring,
             Instance->chron->Now());
 
@@ -514,7 +515,7 @@ namespace server
         if (!strcmp(cJSON_GetObjectItem(reqJSON, "name")->valuestring, user::System::System.Name))
         {
             cJSON_Delete(reqJSON);
-            ESP_ERROR_CHECK(Instance->sendError(request, Errors::InvalidRequest, "Cannot log as System"));
+            ESP_ERROR_CHECK(Instance->sendError(request, Errors::NotPermission, "Cannot log as System user"));
             return ESP_FAIL;
         }
 
@@ -523,7 +524,7 @@ namespace server
         if (user == NULL)
         {
             cJSON_Delete(reqJSON);
-            ESP_ERROR_CHECK(Instance->sendError(request, Errors::InvalidRequest, "User doesn't exist"));
+            ESP_ERROR_CHECK(Instance->sendError(request, Errors::NotPermission, "User doesn't exist"));
             return ESP_FAIL;
         }
 
@@ -532,7 +533,7 @@ namespace server
         {
             cJSON_Delete(reqJSON);
             delete user;
-            ESP_ERROR_CHECK(Instance->sendError(request, Errors::InvalidRequest, "Passwords don't match"));
+            ESP_ERROR_CHECK(Instance->sendError(request, Errors::NotPermission, "Passwords don't match"));
             return ESP_FAIL;
         }
 
@@ -616,6 +617,122 @@ namespace server
             ESP_ERROR_CHECK(Instance->sendError(request, Errors::InvalidRequest, "User doesn't exist"));
             return ESP_FAIL;
         }
+
+        // Send response JSON
+        cJSON *resJSON = user->JSON();
+        delete user;
+        cJSON_DeleteItemFromObject(resJSON, "password");
+        cJSON_DeleteItemFromObject(resJSON, "token");
+        ESP_ERROR_CHECK(Instance->sendJSON(request, resJSON, Statuses::_200));
+        cJSON_Delete(resJSON);
+
+        return ESP_OK;
+    }
+
+    esp_err_t Server::apiPutUserHandler(httpd_req_t *request)
+    {
+        // Authenticate request user
+        user::User *reqUser = Instance->checkToken(request);
+        if (reqUser == NULL)
+        {
+            ESP_ERROR_CHECK(Instance->sendError(request, Errors::Unauthorized, NULL));
+            return ESP_FAIL;
+        }
+
+        // Get name path param
+        const char *name = Instance->getPathParam(request);
+
+        // Ensure not modifying the default system user
+        if (!strcmp(name, user::System::System.Name))
+        {
+            delete reqUser;
+            free((void *)name);
+            ESP_ERROR_CHECK(Instance->sendError(request, Errors::NotPermission, "Cannot modify System user"));
+            return ESP_FAIL;
+        }
+
+        // Get user
+        user::User *user = Instance->user->Get(name);
+        free((void *)name);
+        if (user == NULL)
+        {
+            delete reqUser;
+            ESP_ERROR_CHECK(Instance->sendError(request, Errors::InvalidRequest, "User doesn't exist"));
+            return ESP_FAIL;
+        }
+
+        // Bind request JSON
+        cJSON *reqJSON = NULL;
+        ESP_ERROR_CHECK(Instance->recvJSON(request, &reqJSON));
+
+        // Update password if present
+        if (cJSON_GetObjectItem(reqJSON, "password") != NULL)
+        {
+            // Check if it is the requesting user or it is an admin
+            if (strcmp(reqUser->Name, user->Name) && strcmp(reqUser->Role, role::System::Admin.Name))
+            {
+                delete reqUser;
+                delete user;
+                cJSON_Delete(reqJSON);
+                ESP_ERROR_CHECK(Instance->sendError(request, Errors::NotPermission, "Cannot change password of another user"));
+                return ESP_FAIL;
+            }
+
+            free((void *)user->Password);
+            user->Password = strdup(cJSON_GetObjectItem(reqJSON, "password")->valuestring);
+        }
+
+        // Update emoji if present
+        if (cJSON_GetObjectItem(reqJSON, "emoji") != NULL)
+        {
+            // Check if it is the requesting user or it is an admin
+            if (strcmp(reqUser->Name, user->Name) && strcmp(reqUser->Role, role::System::Admin.Name))
+            {
+                delete reqUser;
+                delete user;
+                cJSON_Delete(reqJSON);
+                ESP_ERROR_CHECK(Instance->sendError(request, Errors::NotPermission, "Cannot change emoji of another user"));
+                return ESP_FAIL;
+            }
+
+            free((void *)user->Emoji);
+            user->Emoji = strdup(cJSON_GetObjectItem(reqJSON, "emoji")->valuestring);
+        }
+
+        // Update role if present
+        if (cJSON_GetObjectItem(reqJSON, "role") != NULL)
+        {
+            // Check if the requesting user is an admin
+            if (strcmp(reqUser->Role, role::System::Admin.Name))
+            {
+                delete reqUser;
+                delete user;
+                cJSON_Delete(reqJSON);
+                ESP_ERROR_CHECK(Instance->sendError(request, Errors::NotPermission, "Cannot change role of another user"));
+                return ESP_FAIL;
+            }
+
+            // Check if role exists
+            role::Role *role = Instance->role->Get(cJSON_GetObjectItem(reqJSON, "role")->valuestring);
+            if (role == NULL)
+            {
+                delete reqUser;
+                delete user;
+                cJSON_Delete(reqJSON);
+                ESP_ERROR_CHECK(Instance->sendError(request, Errors::InvalidRequest, "Role doesn't exist"));
+                return ESP_FAIL;
+            }
+
+            free((void *)user->Role);
+            user->Role = strdup(role->Name);
+            delete role;
+        }
+
+        delete reqUser;
+        cJSON_Delete(reqJSON);
+
+        // Save user
+        Instance->user->Set(user);
 
         // Send response JSON
         cJSON *resJSON = user->JSON();

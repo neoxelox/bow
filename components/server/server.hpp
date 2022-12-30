@@ -105,6 +105,7 @@ namespace server
         httpd_uri_t apiPostLoginURIHandler = {"/api/login", Methods::POST, apiPostLoginHandler};
         httpd_uri_t apiGetUsersURIHandler = {"/api/users", Methods::GET, apiGetUsersHandler};
         httpd_uri_t apiGetUserURIHandler = {"/api/users/*", Methods::GET, apiGetUserHandler};
+        httpd_uri_t apiPutUserURIHandler = {"/api/users/*", Methods::PUT, apiPutUserHandler};
 
     private:
         void start();
@@ -124,6 +125,7 @@ namespace server
         static esp_err_t apiPostLoginHandler(httpd_req_t *request);
         static esp_err_t apiGetUsersHandler(httpd_req_t *request);
         static esp_err_t apiGetUserHandler(httpd_req_t *request);
+        static esp_err_t apiPutUserHandler(httpd_req_t *request);
 
     public:
         inline static Server *Instance;

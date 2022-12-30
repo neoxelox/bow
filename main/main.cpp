@@ -12,12 +12,6 @@
 #include "trigger.hpp"
 #include "role.hpp"
 
-// TODO: Only for debug, remove
-#include <string.h>
-#include "freertos/FreeRTOS.h"
-#include "freertos/task.h"
-// ----------------------------
-
 namespace main
 {
     static const char *TAG = "main";
@@ -74,31 +68,6 @@ namespace main
             Instance->logger->Info(TAG, "Startup took %f ms", (float)(elapsed / 1000.0l));
             Instance->logger->Info(TAG, "==================== %s v%s ====================",
                                    Instance->description->project_name, Instance->description->version);
-
-            // TODO: Only for debug, remove
-
-            vTaskDelay(5000 / portTICK_PERIOD_MS);
-
-            char taskInfoList[1024];
-            char *taskInfo;
-
-            vTaskList(taskInfoList);
-
-            taskInfo = strtok(taskInfoList, "\n");
-
-            Instance->logger->Debug(TAG, "=====================================================");
-            Instance->logger->Debug(TAG, "Task             State   Prio    Free    Num     Core");
-            Instance->logger->Debug(TAG, "-----------------------------------------------------");
-
-            while (taskInfo != NULL)
-            {
-                Instance->logger->Debug(TAG, "%s", taskInfo);
-                taskInfo = strtok(NULL, "\n");
-            }
-
-            Instance->logger->Debug(TAG, "=====================================================");
-
-            // ----------------------------
 
             return Instance;
         }
