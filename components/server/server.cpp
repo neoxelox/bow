@@ -10,6 +10,14 @@
 #include "http_parser.h"
 #include "cJSON.h"
 #include "esp_vfs_fat.h"
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
+#include "esp_chip_info.h"
+#include "esp_mac.h"
+#include "esp_idf_version.h"
+#include "esp_app_desc.h"
+#include "esp_system.h"
+#include "esp_flash.h"
 #include "logger.hpp"
 #include "database.hpp"
 #include "provisioner.hpp"
@@ -116,10 +124,13 @@ namespace server
         // Register api handlers
         ESP_ERROR_CHECK(httpd_register_uri_handler(this->espServer, &this->apiPostRegisterURIHandler));
         ESP_ERROR_CHECK(httpd_register_uri_handler(this->espServer, &this->apiPostLoginURIHandler));
+
         ESP_ERROR_CHECK(httpd_register_uri_handler(this->espServer, &this->apiGetUsersURIHandler));
         ESP_ERROR_CHECK(httpd_register_uri_handler(this->espServer, &this->apiGetUserURIHandler));
         ESP_ERROR_CHECK(httpd_register_uri_handler(this->espServer, &this->apiPutUserURIHandler));
         ESP_ERROR_CHECK(httpd_register_uri_handler(this->espServer, &this->apiDeleteUserURIHandler));
+
+        ESP_ERROR_CHECK(httpd_register_uri_handler(this->espServer, &this->apiGetSystemInfoURIHandler));
 
         // Register frontend handler, note that it has to be the last one to catch all other URLs
         ESP_ERROR_CHECK(httpd_register_uri_handler(this->espServer, &this->frontURIHandler));
@@ -797,6 +808,85 @@ namespace server
         delete user;
         cJSON_DeleteItemFromObject(resJSON, "password");
         cJSON_DeleteItemFromObject(resJSON, "token");
+        ESP_ERROR_CHECK(Instance->sendJSON(request, resJSON, Statuses::_200));
+        cJSON_Delete(resJSON);
+
+        return ESP_OK;
+    }
+
+    esp_err_t Server::apiGetSystemInfoHandler(httpd_req_t *request)
+    {
+        // Authenticate request user
+        user::User *reqUser = Instance->checkToken(request);
+        if (reqUser == NULL)
+        {
+            ESP_ERROR_CHECK(Instance->sendError(request, Errors::Unauthorized, NULL));
+            return ESP_FAIL;
+        }
+
+        delete reqUser;
+
+        cJSON *resJSON = cJSON_CreateObject();
+
+        // Get chip info
+        esp_chip_info_t chipInfo;
+        esp_chip_info(&chipInfo);
+        uint8_t macSTA;
+        uint8_t macAP;
+        ESP_ERROR_CHECK(esp_read_mac(&macSTA, ESP_MAC_WIFI_STA));
+        ESP_ERROR_CHECK(esp_read_mac(&macAP, ESP_MAC_WIFI_SOFTAP));
+
+        // TODO: Put all chip info like: https://github.com/espressif/esp-idf/blob/master/examples/get-started/hello_world/main/hello_world_main.c
+        cJSON *chipJSON = cJSON_AddObjectToObject(resJSON, "chip");
+
+        // TODO: Put both MACs using sprintf, MACSTR and MAC2STR
+        cJSON *macJSON = cJSON_AddObjectToObject(chipJSON, "mac");
+
+        // Get firmware info
+        const esp_app_desc_t *appDesc = esp_app_get_description();
+
+        cJSON *firmwareJSON = cJSON_AddObjectToObject(resJSON, "firmware");
+        cJSON *sdkJSON = cJSON_AddObjectToObject(firmwareJSON, "sdk");
+        cJSON_AddStringToObject(sdkJSON, "name", "ESP-IDF");
+        cJSON_AddStringToObject(sdkJSON, "version", appDesc->idf_ver);
+        cJSON *appJSON = cJSON_AddObjectToObject(firmwareJSON, "app");
+        cJSON_AddStringToObject(appJSON, "name", appDesc->project_name);
+        cJSON_AddStringToObject(appJSON, "version", appDesc->version);
+        cJSON_AddStringToObject(appJSON, "date", appDesc->date);
+        cJSON_AddStringToObject(appJSON, "time", appDesc->time);
+
+        // Get tasks info
+        char taskInfoList[1024];
+        vTaskList(taskInfoList);
+
+        // TODO: Put all task info like: https://github.com/Neoxelox/bow/blob/8ac2ed5170df906e88818264e75fa164f8d736b2/main/main.cpp
+        cJSON *tasksJSON = cJSON_AddObjectToObject(resJSON, "tasks");
+
+        // Get resources info (esp_get_free_heap_size)
+        uint32_t totalRAM;
+        uint32_t usedRAM;
+        uint32_t totalROM;
+        uint32_t usedROM;
+        // ESP_ERROR_CHECK(esp_flash_get_size(NULL, &totalROM));
+        // usedRAM = totalRAM - esp_get_free_heap_size();
+
+        // TODO: Put used/total RAM/ROM
+        cJSON *resourcesJSON = cJSON_AddObjectToObject(resJSON, "resources");
+
+        // Get time info
+        cJSON *timeJSON = cJSON_AddObjectToObject(resJSON, "time");
+        cJSON_AddStringToObject(timeJSON, "zone", chron::NTP_SERVER_ADDRESS);
+        cJSON_AddStringToObject(timeJSON, "server", chron::TIME_ZONE);
+
+        // Get database info
+        nvs_stats_t databaseInfo;
+        Instance->database->Info(&databaseInfo);
+
+        cJSON *databaseJSON = cJSON_AddObjectToObject(resJSON, "database");
+        cJSON_AddNumberToObject(databaseJSON, "total", databaseInfo.total_entries);
+        cJSON_AddNumberToObject(databaseJSON, "used", databaseInfo.used_entries);
+
+        // Send response JSON
         ESP_ERROR_CHECK(Instance->sendJSON(request, resJSON, Statuses::_200));
         cJSON_Delete(resJSON);
 

@@ -107,6 +107,7 @@ namespace server
         httpd_uri_t apiGetUserURIHandler = {"/api/users/*", Methods::GET, apiGetUserHandler};
         httpd_uri_t apiPutUserURIHandler = {"/api/users/*", Methods::PUT, apiPutUserHandler};
         httpd_uri_t apiDeleteUserURIHandler = {"/api/users/*", Methods::DELETE, apiDeleteUserHandler};
+        httpd_uri_t apiGetSystemInfoURIHandler = {"/api/system/info", Methods::GET, apiGetSystemInfoHandler};
 
     private:
         void start();
@@ -122,12 +123,16 @@ namespace server
         static void ipFunc(void *args, esp_event_base_t base, int32_t id, void *data);
         static esp_err_t errorHandler(httpd_req_t *request, httpd_err_code_t error);
         static esp_err_t frontHandler(httpd_req_t *request);
+
         static esp_err_t apiPostRegisterHandler(httpd_req_t *request);
         static esp_err_t apiPostLoginHandler(httpd_req_t *request);
+
         static esp_err_t apiGetUsersHandler(httpd_req_t *request);
         static esp_err_t apiGetUserHandler(httpd_req_t *request);
         static esp_err_t apiPutUserHandler(httpd_req_t *request);
         static esp_err_t apiDeleteUserHandler(httpd_req_t *request);
+
+        static esp_err_t apiGetSystemInfoHandler(httpd_req_t *request);
 
     public:
         inline static Server *Instance;
