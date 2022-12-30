@@ -119,6 +119,7 @@ namespace server
         ESP_ERROR_CHECK(httpd_register_uri_handler(this->espServer, &this->apiGetUsersURIHandler));
         ESP_ERROR_CHECK(httpd_register_uri_handler(this->espServer, &this->apiGetUserURIHandler));
         ESP_ERROR_CHECK(httpd_register_uri_handler(this->espServer, &this->apiPutUserURIHandler));
+        ESP_ERROR_CHECK(httpd_register_uri_handler(this->espServer, &this->apiDeleteUserURIHandler));
 
         // Register frontend handler, note that it has to be the last one to catch all other URLs
         ESP_ERROR_CHECK(httpd_register_uri_handler(this->espServer, &this->frontURIHandler));
@@ -733,6 +734,63 @@ namespace server
 
         // Save user
         Instance->user->Set(user);
+
+        // Send response JSON
+        cJSON *resJSON = user->JSON();
+        delete user;
+        cJSON_DeleteItemFromObject(resJSON, "password");
+        cJSON_DeleteItemFromObject(resJSON, "token");
+        ESP_ERROR_CHECK(Instance->sendJSON(request, resJSON, Statuses::_200));
+        cJSON_Delete(resJSON);
+
+        return ESP_OK;
+    }
+
+    esp_err_t Server::apiDeleteUserHandler(httpd_req_t *request)
+    {
+        // Authenticate request user
+        user::User *reqUser = Instance->checkToken(request);
+        if (reqUser == NULL)
+        {
+            ESP_ERROR_CHECK(Instance->sendError(request, Errors::Unauthorized, NULL));
+            return ESP_FAIL;
+        }
+
+        // Get name path param
+        const char *name = Instance->getPathParam(request);
+
+        // Ensure not deleting the default system user
+        if (!strcmp(name, user::System::System.Name))
+        {
+            delete reqUser;
+            free((void *)name);
+            ESP_ERROR_CHECK(Instance->sendError(request, Errors::NotPermission, "Cannot delete System user"));
+            return ESP_FAIL;
+        }
+
+        // Get user
+        user::User *user = Instance->user->Get(name);
+        free((void *)name);
+        if (user == NULL)
+        {
+            delete reqUser;
+            ESP_ERROR_CHECK(Instance->sendError(request, Errors::InvalidRequest, "User doesn't exist"));
+            return ESP_FAIL;
+        }
+
+        // Check if it is the requesting user or it is an admin
+        if (strcmp(reqUser->Name, user->Name) && strcmp(reqUser->Role, role::System::Admin.Name))
+        {
+            delete reqUser;
+            delete user;
+            ESP_ERROR_CHECK(Instance->sendError(request, Errors::NotPermission, "Cannot delete another user"));
+            return ESP_FAIL;
+        }
+
+        delete reqUser;
+
+        // Delete user
+        Instance->user->Delete(user->Name);
 
         // Send response JSON
         cJSON *resJSON = user->JSON();
