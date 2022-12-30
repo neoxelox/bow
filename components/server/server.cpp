@@ -131,6 +131,7 @@ namespace server
         ESP_ERROR_CHECK(httpd_register_uri_handler(this->espServer, &this->apiDeleteUserURIHandler));
 
         ESP_ERROR_CHECK(httpd_register_uri_handler(this->espServer, &this->apiGetSystemInfoURIHandler));
+        ESP_ERROR_CHECK(httpd_register_uri_handler(this->espServer, &this->apiGetSystemTimeURIHandler));
 
         // Register frontend handler, note that it has to be the last one to catch all other URLs
         ESP_ERROR_CHECK(httpd_register_uri_handler(this->espServer, &this->frontURIHandler));
@@ -875,8 +876,8 @@ namespace server
 
         // Get time info
         cJSON *timeJSON = cJSON_AddObjectToObject(resJSON, "time");
-        cJSON_AddStringToObject(timeJSON, "zone", chron::NTP_SERVER_ADDRESS);
-        cJSON_AddStringToObject(timeJSON, "server", chron::TIME_ZONE);
+        cJSON_AddStringToObject(timeJSON, "server", chron::NTP_SERVER_ADDRESS);
+        cJSON_AddStringToObject(timeJSON, "zone", chron::TIME_ZONE);
 
         // Get database info
         nvs_stats_t databaseInfo;
@@ -887,6 +888,31 @@ namespace server
         cJSON_AddNumberToObject(databaseJSON, "used", databaseInfo.used_entries);
 
         // Send response JSON
+        ESP_ERROR_CHECK(Instance->sendJSON(request, resJSON, Statuses::_200));
+        cJSON_Delete(resJSON);
+
+        return ESP_OK;
+    }
+
+    esp_err_t Server::apiGetSystemTimeHandler(httpd_req_t *request)
+    {
+        // Authenticate request user
+        user::User *reqUser = Instance->checkToken(request);
+        if (reqUser == NULL)
+        {
+            ESP_ERROR_CHECK(Instance->sendError(request, Errors::Unauthorized, NULL));
+            return ESP_FAIL;
+        }
+
+        delete reqUser;
+
+        // Get current time
+        time_t now = Instance->chron->Now();
+
+        // Send response JSON
+        cJSON *resJSON = cJSON_CreateObject();
+        cJSON_AddNumberToObject(resJSON, "time", now);
+        cJSON_AddStringToObject(resJSON, "zone", chron::TIME_ZONE);
         ESP_ERROR_CHECK(Instance->sendJSON(request, resJSON, Statuses::_200));
         cJSON_Delete(resJSON);
 

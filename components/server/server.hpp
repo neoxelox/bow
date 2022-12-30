@@ -101,13 +101,17 @@ namespace server
         httpd_handle_t espServer;
         wl_handle_t fsHandle;
         httpd_uri_t frontURIHandler = {"/?*", Methods::GET, frontHandler};
+
         httpd_uri_t apiPostRegisterURIHandler = {"/api/register", Methods::POST, apiPostRegisterHandler};
         httpd_uri_t apiPostLoginURIHandler = {"/api/login", Methods::POST, apiPostLoginHandler};
+
         httpd_uri_t apiGetUsersURIHandler = {"/api/users", Methods::GET, apiGetUsersHandler};
         httpd_uri_t apiGetUserURIHandler = {"/api/users/*", Methods::GET, apiGetUserHandler};
         httpd_uri_t apiPutUserURIHandler = {"/api/users/*", Methods::PUT, apiPutUserHandler};
         httpd_uri_t apiDeleteUserURIHandler = {"/api/users/*", Methods::DELETE, apiDeleteUserHandler};
+
         httpd_uri_t apiGetSystemInfoURIHandler = {"/api/system/info", Methods::GET, apiGetSystemInfoHandler};
+        httpd_uri_t apiGetSystemTimeURIHandler = {"/api/system/time", Methods::GET, apiGetSystemTimeHandler};
 
     private:
         void start();
@@ -133,6 +137,7 @@ namespace server
         static esp_err_t apiDeleteUserHandler(httpd_req_t *request);
 
         static esp_err_t apiGetSystemInfoHandler(httpd_req_t *request);
+        static esp_err_t apiGetSystemTimeHandler(httpd_req_t *request);
 
     public:
         inline static Server *Instance;
