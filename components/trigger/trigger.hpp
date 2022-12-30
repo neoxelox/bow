@@ -47,6 +47,5 @@ namespace trigger
         void Set(Trigger *trigger);
         void Delete(const char *name);
         void Drop();
-        void GenerateToken(char *token);
     };
 }
