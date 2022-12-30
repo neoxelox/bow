@@ -1,4 +1,5 @@
 #include <cstring>
+#include <string.h>
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "freertos/queue.h"
@@ -202,6 +203,7 @@ namespace device
             continue;
         }
 
+        // Ensure NULL-terminated c-string
         this->isrData[bit] = '\0';
 
         return true;
@@ -218,8 +220,24 @@ namespace device
             Instance->logger->Debug(TAG, "Rx | Data: %s | Protocol: %d", packet->Data, packet->Protocol);
             Instance->status->SetStatus(status::Statuses::Received);
 
-            // TODO: Save data if sensor in database
+            // Check if the received data is an identifier from an exisiting sensor
+            Device *sensor = Instance->device->GetSensorByIdentifier(packet->Data);
+            if (sensor != NULL)
+            {
+                Instance->logger->Debug(TAG, "Received data from %s", sensor->Name);
 
+                // Update context depending on sensor subtype
+                if (!strcmp(sensor->Subtype, Subtypes::Bistate))
+                {
+                    free((void *)sensor->Context.Bistate.LastIdentifier);
+                    sensor->Context.Bistate.LastIdentifier = strdup(packet->Data);
+                }
+
+                // Save updated sensor context
+                Instance->device->Set(sensor);
+            }
+
+            delete sensor;
             delete packet;
         }
     }

@@ -480,7 +480,7 @@ namespace server
             cJSON_GetObjectItem(reqJSON, "name")->valuestring,
             cJSON_GetObjectItem(reqJSON, "password")->valuestring,
             token,
-            Instance->user->Count() > 0 ? "MEMBER" : "ADMIN", // TODO: Get default system roles from role component
+            Instance->user->Count() > 0 ? role::System::MEMBER : role::System::ADMIN,
             cJSON_GetObjectItem(reqJSON, "emoji")->valuestring,
             Instance->chron->Now());
 

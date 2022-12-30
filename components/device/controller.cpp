@@ -214,7 +214,7 @@ namespace device
         return count;
     }
 
-    Device *Controller::Get(const char *name)
+    Device *Controller::GetByName(const char *name)
     {
         Device *device = NULL;
 
@@ -225,6 +225,52 @@ namespace device
             device = new Device(deviceJSON);
 
         cJSON_Delete(deviceJSON);
+
+        return device;
+    }
+
+    Device *Controller::GetSensorByIdentifier(const char *identifier)
+    {
+        Device *device = NULL;
+
+        typedef struct findArgs
+        {
+            Device *device;
+            const char *identifier;
+        } findArgs;
+
+        findArgs args = {
+            .device = device,
+            .identifier = identifier,
+        };
+
+        ESP_ERROR_CHECK(this->db->Find(
+            [](const char *key, void *funcArgs) -> bool
+            {
+                cJSON *deviceJSON = NULL;
+                ESP_ERROR_CHECK(Instance->db->Get(key, &deviceJSON));
+
+                if (!strcmp(cJSON_GetObjectItem(deviceJSON, "type")->valuestring, Types::Sensor))
+                {
+                    findArgs *args = *(findArgs **)funcArgs;
+                    cJSON *context = cJSON_GetObjectItem(deviceJSON, "context");
+
+                    if (!strcmp(cJSON_GetObjectItem(deviceJSON, "subtype")->valuestring, Subtypes::Bistate))
+                    {
+                        if (!strcmp(cJSON_GetObjectItem(context, "identifier1")->valuestring, args->identifier) ||
+                            !strcmp(cJSON_GetObjectItem(context, "identifier2")->valuestring, args->identifier))
+                        {
+                            args->device = new Device(deviceJSON);
+                            cJSON_Delete(deviceJSON);
+                            return true;
+                        }
+                    }
+                }
+
+                cJSON_Delete(deviceJSON);
+                return false;
+            },
+            &args));
 
         return device;
     }

@@ -149,7 +149,8 @@ namespace device
 
     public:
         uint32_t Count();
-        Device *Get(const char *name);
+        Device *GetByName(const char *name);
+        Device *GetSensorByIdentifier(const char *identifier);
         Device *List(uint32_t *size);
         void Set(Device *device);
         void Delete(const char *name);
