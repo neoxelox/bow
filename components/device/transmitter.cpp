@@ -1,3 +1,4 @@
+#include <string.h>
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "freertos/queue.h"
@@ -41,7 +42,11 @@ namespace device
 
     esp_err_t Transmitter::Send(Packet *packet)
     {
-        if (xQueueSend(this->queue, &packet, 0) == errQUEUE_FULL)
+        Packet *send = new Packet();
+        send->Protocol = packet->Protocol;
+        strcpy(send->Data, packet->Data);
+
+        if (xQueueSend(this->queue, &send, 0) == errQUEUE_FULL)
             return ESP_ERR_NO_MEM;
 
         return ESP_OK;

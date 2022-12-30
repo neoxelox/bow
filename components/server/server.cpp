@@ -556,7 +556,7 @@ namespace server
 
         // Get all users
         uint32_t size;
-        user::User *list = Instance->user->List(&size);
+        user::User *users = Instance->user->List(&size);
 
         // Send response JSON
         cJSON *resJSON = cJSON_CreateObject();
@@ -564,13 +564,13 @@ namespace server
 
         for (int i = 0; i < size; i++)
         {
-            cJSON *userJSON = list[i].JSON();
+            cJSON *userJSON = users[i].JSON();
             cJSON_DeleteItemFromObject(userJSON, "password");
             cJSON_DeleteItemFromObject(userJSON, "token");
             cJSON_AddItemToArray(usersJSON, userJSON);
         }
 
-        delete[] list;
+        delete[] users;
 
         ESP_ERROR_CHECK(Instance->sendJSON(request, resJSON, Statuses::_200));
         cJSON_Delete(resJSON);

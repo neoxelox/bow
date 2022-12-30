@@ -5,6 +5,7 @@
 #include "freertos/task.h"
 #include "logger.hpp"
 #include "chron.hpp"
+#include "device.hpp"
 #include "database.hpp"
 
 namespace trigger
@@ -39,6 +40,8 @@ namespace trigger
     private:
         logger::Logger *logger;
         chron::Controller *chron;
+        device::Transmitter *transmitter;
+        device::Controller *device;
         database::Handle *db;
         TaskHandle_t taskHandle;
 
@@ -47,7 +50,8 @@ namespace trigger
 
     public:
         inline static Controller *Instance;
-        static Controller *New(logger::Logger *logger, chron::Controller *chron, database::Database *database);
+        static Controller *New(logger::Logger *logger, chron::Controller *chron, device::Transmitter *transmitter,
+                               device::Controller *device, database::Database *database);
 
     public:
         uint32_t Count();

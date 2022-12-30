@@ -6,6 +6,7 @@
 #include "ccronexpr.h"
 #include "logger.hpp"
 #include "chron.hpp"
+#include "device.hpp"
 #include "database.hpp"
 #include "trigger.hpp"
 
@@ -86,7 +87,8 @@ namespace trigger
         return root;
     }
 
-    Controller *Controller::New(logger::Logger *logger, chron::Controller *chron, database::Database *database)
+    Controller *Controller::New(logger::Logger *logger, chron::Controller *chron, device::Transmitter *transmitter,
+                                device::Controller *device, database::Database *database)
     {
         if (Instance != NULL)
             return Instance;
@@ -96,6 +98,8 @@ namespace trigger
         // Inject dependencies
         Instance->logger = logger;
         Instance->chron = chron;
+        Instance->transmitter = transmitter;
+        Instance->device = device;
         Instance->db = database->Open(DB_NAMESPACE);
 
         // Create trigger scheduler task
@@ -106,9 +110,64 @@ namespace trigger
 
     void Controller::taskFunc(void *args)
     {
+        time_t now;
+        time_t then;
+        cron_expr schedule;
+        const char *err;
+        char *expr;
+
         while (1)
         {
-            Instance->logger->Debug(TAG, "Scheduling...");
+            // Get current time
+            now = Instance->chron->Now();
+
+            // Get all triggers
+            uint32_t size;
+            Trigger *triggers = Instance->List(&size);
+
+            // Test schedule of all triggers
+            for (int i = 0; i < size; i++)
+            {
+                memset(&schedule, 0, sizeof(cron_expr));
+                err = NULL;
+                expr = NULL;
+
+                // Match up to 1 minute fixing 59 on seconds
+                expr = (char *)malloc(strlen(triggers[i].Schedule) + 3 + 1);
+                strcpy(expr, "59 ");
+
+                // Parse trigger schedule
+                cron_parse_expr(strcat(expr, triggers[i].Schedule), &schedule, &err);
+                if (err != NULL)
+                    ESP_ERROR_CHECK(ESP_ERR_INVALID_STATE);
+                free((void *)expr);
+
+                // Match up to 1 minute ignoring seconds and ensure we are not in the future
+                then = cron_next(&schedule, now) - now;
+                if (then >= 0 && then <= 59)
+                {
+                    // Get actuator to trigger
+                    device::Device *actuator = Instance->device->GetByName(triggers[i].Actuator);
+                    if (actuator == NULL)
+                        ESP_ERROR_CHECK(ESP_ERR_INVALID_STATE);
+
+                    device::Packet command = device::Packet();
+                    command.Protocol = actuator->Protocol;
+
+                    // Make packet depending on actuator subtype
+                    if (!strcmp(actuator->Subtype, device::Subtypes::Button))
+                        strcpy(command.Data, actuator->Context.Button.Command);
+
+                    // Send command to actuator
+                    Instance->transmitter->Send(&command);
+
+                    Instance->logger->Debug(TAG, "Actuator %s triggered", actuator->Name);
+
+                    delete actuator;
+                }
+            }
+
+            delete[] triggers;
 
             vTaskDelay(SCHEDULER_PERIOD);
         }

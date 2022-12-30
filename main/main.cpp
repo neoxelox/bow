@@ -60,10 +60,11 @@ namespace main
             Instance->chron = chron::Controller::New(Instance->logger, Instance->provisioner);
             Instance->user = user::Controller::New(Instance->logger, Instance->database);
             Instance->device = device::Controller::New(Instance->logger, Instance->database);
-            Instance->trigger = trigger::Controller::New(Instance->logger, Instance->chron, Instance->database);
             Instance->role = role::Controller::New(Instance->logger, Instance->database);
             Instance->receiver = device::Receiver::New(Instance->logger, Instance->status, Instance->device);
             Instance->transmitter = device::Transmitter::New(Instance->logger, Instance->status);
+            Instance->trigger = trigger::Controller::New(Instance->logger, Instance->chron, Instance->transmitter,
+                                                         Instance->device, Instance->database);
             Instance->server = server::Server::New(Instance->logger, Instance->database, Instance->provisioner,
                                                    Instance->chron, Instance->transmitter, Instance->receiver,
                                                    Instance->user, Instance->device, Instance->trigger,
