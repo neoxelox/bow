@@ -57,7 +57,7 @@ namespace device
 
             Instance->encode(packet, 3);
 
-            Instance->logger->Debug(TAG, "Tx | Data: %s | Protocol: %d", packet->Data, packet->ProtocolID);
+            Instance->logger->Debug(TAG, "Tx | Data: %s | Protocol: %d", packet->Data, packet->Protocol);
             Instance->status->SetStatus(status::Statuses::Transmitted);
 
             delete packet;
@@ -66,7 +66,7 @@ namespace device
 
     void Transmitter::encode(const Packet *packet, int replays)
     {
-        const Protocol *protocol = &PROTOCOLS[packet->ProtocolID - 1];
+        const Protocol *protocol = &PROTOCOLS[packet->Protocol - 1];
 
         taskENTER_CRITICAL(&(this->lock));
 

@@ -94,18 +94,18 @@ namespace device
                     // Ignore small packets which can be noise
                     if ((Instance->isrIndex - 2) >= MIN_DATA_PULSES)
                     {
-                        uint8_t protocolID;
+                        uint8_t protocol;
 
                         // Try to decode the packet with all known protocols
-                        for (protocolID = 0; protocolID < NUM_PROTOCOLS; protocolID++)
-                            if (Instance->decode(&PROTOCOLS[protocolID]))
+                        for (protocol = 0; protocol < NUM_PROTOCOLS; protocol++)
+                            if (Instance->decode(&PROTOCOLS[protocol]))
                                 break;
 
                         // The packet has been successfully decoded
-                        if (protocolID < NUM_PROTOCOLS)
+                        if (protocol < NUM_PROTOCOLS)
                         {
                             // Publish packet to the queue
-                            Packet *packet = new Packet{++protocolID};
+                            Packet *packet = new Packet{++protocol};
                             memcpy(packet->Data, Instance->isrData, MAX_DATA_PULSES + 1);
                             xQueueSendFromISR(Instance->queue, &packet, NULL);
                         }
@@ -214,7 +214,7 @@ namespace device
         {
             xQueueReceive(Instance->queue, &packet, portMAX_DELAY);
 
-            Instance->logger->Debug(TAG, "Rx | Data: %s | Protocol: %d", packet->Data, packet->ProtocolID);
+            Instance->logger->Debug(TAG, "Rx | Data: %s | Protocol: %d", packet->Data, packet->Protocol);
             Instance->status->SetStatus(status::Statuses::Received);
 
             // TODO: Save data if sensor in database

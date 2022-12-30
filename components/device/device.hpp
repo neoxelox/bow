@@ -4,13 +4,17 @@
 #include "freertos/task.h"
 #include "freertos/queue.h"
 #include "esp_attr.h"
+#include "cJSON.h"
 #include "logger.hpp"
 #include "gpio.hpp"
 #include "status.hpp"
+#include "database.hpp"
 
 namespace device
 {
     static const char *TAG = "device";
+
+    static const char *DB_NAMESPACE = "device";
 
     static const int MAX_SYNC_PULSES = 4;      // Max PROTOCOLS(Sync) * 2 (extra end sync)
     static const int MAX_PREAMBLE_PULSES = 24; // Max PROTOCOLS(Preamble)
@@ -70,8 +74,86 @@ namespace device
     class Packet
     {
     public:
-        uint8_t ProtocolID;
+        uint8_t Protocol;
         char Data[MAX_DATA_PULSES + 1]; // '\0' terminated c-string
+    };
+
+    namespace Types
+    {
+        static const char *Sensor = "SENSOR";
+        static const char *Actuator = "ACTUATOR";
+    }
+
+    namespace Subtypes
+    {
+        static const char *Button = "BUTTON";
+        static const char *Bistate = "BISTATE";
+    }
+
+    namespace Contexts
+    {
+        typedef struct Button
+        {
+            const char *Command;
+            const char *Emoji;
+        } Button;
+
+        typedef struct Bistate
+        {
+            const char *Identifier1;
+            const char *Emoji1;
+            const char *Identifier2;
+            const char *Emoji2;
+            const char *LastIdentifier;
+        } Bistate;
+    }
+
+    typedef union Context
+    {
+        Contexts::Button Button;
+        Contexts::Bistate Bistate;
+    } Context;
+
+    class Device
+    {
+    public:
+        const char *Name;
+        const char *Type;
+        const char *Subtype;
+        uint8_t Protocol;
+        union Context Context;
+        const char *Emoji;
+        const char *Creator;
+        time_t CreatedAt;
+
+    public:
+        Device();
+        Device(const char *name, const char *type, const char *subtype,
+               uint8_t protocol, union Context context, const char *emoji,
+               const char *creator, time_t createdAt);
+        Device(cJSON *src);
+        ~Device();
+        Device &operator=(const Device &other);
+        cJSON *JSON();
+    };
+
+    class Controller
+    {
+    private:
+        logger::Logger *logger;
+        database::Handle *db;
+
+    public:
+        inline static Controller *Instance;
+        static Controller *New(logger::Logger *logger, database::Database *database);
+
+    public:
+        uint32_t Count();
+        Device *Get(const char *name);
+        Device *List(uint32_t *size);
+        void Set(Device *device);
+        void Delete(const char *name);
+        void Drop();
     };
 
     class Receiver
