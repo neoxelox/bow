@@ -9,8 +9,10 @@
 #include "database.hpp"
 #include "provisioner.hpp"
 #include "chron.hpp"
-#include "device.hpp"
 #include "user.hpp"
+#include "device.hpp"
+#include "trigger.hpp"
+#include "role.hpp"
 
 namespace server
 {
@@ -93,6 +95,9 @@ namespace server
         device::Transmitter *transmitter;
         device::Receiver *receiver;
         user::Controller *user;
+        device::Controller *device;
+        trigger::Controller *trigger;
+        role::Controller *role;
         httpd_handle_t espServer;
         wl_handle_t fsHandle;
         httpd_uri_t frontURIHandler = {"/?*", Methods::GET, frontHandler};
@@ -121,6 +126,7 @@ namespace server
         inline static Server *Instance;
         static Server *New(logger::Logger *logger, database::Database *database, provisioner::Provisioner *provisioner,
                            chron::Controller *chron, device::Transmitter *transmitter, device::Receiver *receiver,
-                           user::Controller *user);
+                           user::Controller *user, device::Controller *device, trigger::Controller *trigger,
+                           role::Controller *role);
     };
 }

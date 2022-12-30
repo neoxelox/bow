@@ -34,7 +34,7 @@ namespace status
             ESP_ERROR_CHECK(ESP_ERR_NO_MEM);
 
         // Create RGB LED task
-        xTaskCreatePinnedToCore(Instance->taskFunc, "Status", 4 * 1024, NULL, 5, &Instance->taskHandle, tskNO_AFFINITY);
+        xTaskCreatePinnedToCore(Instance->taskFunc, "Status", 4 * 1024, NULL, 6, &Instance->taskHandle, tskNO_AFFINITY);
 
         return Instance;
     }

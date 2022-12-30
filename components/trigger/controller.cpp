@@ -1,7 +1,11 @@
 #include <string.h>
 #include "esp_err.h"
 #include "cJSON.h"
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
+#include "ccronexpr.h"
 #include "logger.hpp"
+#include "chron.hpp"
 #include "database.hpp"
 #include "trigger.hpp"
 
@@ -82,7 +86,7 @@ namespace trigger
         return root;
     }
 
-    Controller *Controller::New(logger::Logger *logger, database::Database *database)
+    Controller *Controller::New(logger::Logger *logger, chron::Controller *chron, database::Database *database)
     {
         if (Instance != NULL)
             return Instance;
@@ -91,9 +95,23 @@ namespace trigger
 
         // Inject dependencies
         Instance->logger = logger;
+        Instance->chron = chron;
         Instance->db = database->Open(DB_NAMESPACE);
 
+        // Create trigger scheduler task
+        xTaskCreatePinnedToCore(Instance->taskFunc, "Trigger", 4 * 1024, NULL, 7, &Instance->taskHandle, tskNO_AFFINITY);
+
         return Instance;
+    }
+
+    void Controller::taskFunc(void *args)
+    {
+        while (1)
+        {
+            Instance->logger->Debug(TAG, "Scheduling...");
+
+            vTaskDelay(SCHEDULER_PERIOD);
+        }
     }
 
     uint32_t Controller::Count()

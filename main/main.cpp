@@ -9,6 +9,8 @@
 #include "provisioner.hpp"
 #include "server.hpp"
 #include "user.hpp"
+#include "trigger.hpp"
+#include "role.hpp"
 
 // TODO: Only for debug, remove
 #include <string.h>
@@ -32,6 +34,9 @@ namespace main
         chron::Controller *chron;
         provisioner::Provisioner *provisioner;
         user::Controller *user;
+        device::Controller *device;
+        trigger::Controller *trigger;
+        role::Controller *role;
         server::Server *server;
 
     public:
@@ -53,12 +58,16 @@ namespace main
             Instance->database = database::Database::New(Instance->logger);
             Instance->provisioner = provisioner::Provisioner::New(Instance->logger, Instance->status, Instance->database);
             Instance->chron = chron::Controller::New(Instance->logger, Instance->provisioner);
-            Instance->receiver = device::Receiver::New(Instance->logger, Instance->status);
-            Instance->transmitter = device::Transmitter::New(Instance->logger, Instance->status);
             Instance->user = user::Controller::New(Instance->logger, Instance->database);
+            Instance->device = device::Controller::New(Instance->logger, Instance->database);
+            Instance->trigger = trigger::Controller::New(Instance->logger, Instance->chron, Instance->database);
+            Instance->role = role::Controller::New(Instance->logger, Instance->database);
+            Instance->receiver = device::Receiver::New(Instance->logger, Instance->status, Instance->device);
+            Instance->transmitter = device::Transmitter::New(Instance->logger, Instance->status);
             Instance->server = server::Server::New(Instance->logger, Instance->database, Instance->provisioner,
                                                    Instance->chron, Instance->transmitter, Instance->receiver,
-                                                   Instance->user);
+                                                   Instance->user, Instance->device, Instance->trigger,
+                                                   Instance->role);
 
             elapsed = esp_timer_get_time() - elapsed;
             Instance->logger->Info(TAG, "Startup took %f ms", (float)(elapsed / 1000.0l));

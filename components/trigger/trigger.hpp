@@ -1,7 +1,10 @@
 #pragma once
 
 #include "cJSON.h"
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
 #include "logger.hpp"
+#include "chron.hpp"
 #include "database.hpp"
 
 namespace trigger
@@ -9,6 +12,7 @@ namespace trigger
     static const char *TAG = "trigger";
 
     static const char *DB_NAMESPACE = "trigger";
+    static const TickType_t SCHEDULER_PERIOD = (1 * 60 * 1000) / portTICK_PERIOD_MS; // 1 minute
 
     class Trigger
     {
@@ -34,11 +38,16 @@ namespace trigger
     {
     private:
         logger::Logger *logger;
+        chron::Controller *chron;
         database::Handle *db;
+        TaskHandle_t taskHandle;
+
+    private:
+        static void taskFunc(void *args);
 
     public:
         inline static Controller *Instance;
-        static Controller *New(logger::Logger *logger, database::Database *database);
+        static Controller *New(logger::Logger *logger, chron::Controller *chron, database::Database *database);
 
     public:
         uint32_t Count();

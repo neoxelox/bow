@@ -13,7 +13,7 @@
 
 namespace device
 {
-    Receiver *Receiver::New(logger::Logger *logger, status::Controller *status)
+    Receiver *Receiver::New(logger::Logger *logger, status::Controller *status, Controller *device)
     {
         if (Instance != NULL)
             return Instance;
@@ -23,6 +23,7 @@ namespace device
         // Inject dependencies
         Instance->logger = logger;
         Instance->status = status;
+        Instance->device = device;
 
         // Initialize receiver queue
         Instance->queue = xQueueCreate(QUEUE_SIZE, sizeof(Packet *));

@@ -14,15 +14,18 @@
 #include "database.hpp"
 #include "provisioner.hpp"
 #include "chron.hpp"
-#include "device.hpp"
 #include "user.hpp"
+#include "device.hpp"
+#include "trigger.hpp"
+#include "role.hpp"
 #include "server.hpp"
 
 namespace server
 {
     Server *Server::New(logger::Logger *logger, database::Database *database, provisioner::Provisioner *provisioner,
                         chron::Controller *chron, device::Transmitter *transmitter, device::Receiver *receiver,
-                        user::Controller *user)
+                        user::Controller *user, device::Controller *device, trigger::Controller *trigger,
+                        role::Controller *role)
     {
         if (Instance != NULL)
             return Instance;
@@ -37,6 +40,9 @@ namespace server
         Instance->transmitter = transmitter;
         Instance->receiver = receiver;
         Instance->user = user;
+        Instance->device = device;
+        Instance->trigger = trigger;
+        Instance->role = role;
 
         Instance->espServer = NULL;
 

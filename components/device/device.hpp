@@ -161,6 +161,7 @@ namespace device
     private:
         logger::Logger *logger;
         status::Controller *status;
+        Controller *device;
         gpio::Digital *pin;
         TaskHandle_t taskHandle;
         QueueHandle_t queue;
@@ -178,7 +179,7 @@ namespace device
 
     public:
         inline static Receiver *Instance;
-        static Receiver *New(logger::Logger *logger, status::Controller *status);
+        static Receiver *New(logger::Logger *logger, status::Controller *status, Controller *device);
     };
 
     class Transmitter
