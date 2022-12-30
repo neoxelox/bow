@@ -85,7 +85,7 @@ namespace server
             .server_port = PORT,
             .ctrl_port = 32768,
             .max_open_sockets = MAX_CLIENTS,
-            .max_uri_handlers = 5,
+            .max_uri_handlers = 30,
             .max_resp_headers = 10,
             .backlog_conn = 5,
             .lru_purge_enable = true,
@@ -117,6 +117,7 @@ namespace server
         ESP_ERROR_CHECK(httpd_register_uri_handler(this->espServer, &this->apiPostRegisterURIHandler));
         ESP_ERROR_CHECK(httpd_register_uri_handler(this->espServer, &this->apiPostLoginURIHandler));
         ESP_ERROR_CHECK(httpd_register_uri_handler(this->espServer, &this->apiGetUsersURIHandler));
+        ESP_ERROR_CHECK(httpd_register_uri_handler(this->espServer, &this->apiGetUserURIHandler));
 
         // Register frontend handler, note that it has to be the last one to catch all other URLs
         ESP_ERROR_CHECK(httpd_register_uri_handler(this->espServer, &this->frontURIHandler));
@@ -319,6 +320,12 @@ namespace server
         }
 
         return user;
+    }
+
+    const char *Server::getPathParam(httpd_req_t *request)
+    {
+        // Search for the last path delimiter and return what's next
+        return strdup(strrchr(request->uri, '/') + 1);
     }
 
     void Server::apFunc(void *args, esp_event_base_t base, int32_t id, void *data)
@@ -572,6 +579,41 @@ namespace server
 
         delete[] users;
 
+        ESP_ERROR_CHECK(Instance->sendJSON(request, resJSON, Statuses::_200));
+        cJSON_Delete(resJSON);
+
+        return ESP_OK;
+    }
+
+    esp_err_t Server::apiGetUserHandler(httpd_req_t *request)
+    {
+        // Authenticate request user
+        user::User *reqUser = Instance->checkToken(request);
+        if (reqUser == NULL)
+        {
+            ESP_ERROR_CHECK(Instance->sendError(request, Errors::Unauthorized, NULL));
+            return ESP_FAIL;
+        }
+
+        delete reqUser;
+
+        // Get name path param
+        const char *name = Instance->getPathParam(request);
+
+        // Get user
+        user::User *user = Instance->user->Get(name);
+        free((void *)name);
+        if (user == NULL)
+        {
+            ESP_ERROR_CHECK(Instance->sendError(request, Errors::InvalidRequest, "User doesn't exist"));
+            return ESP_FAIL;
+        }
+
+        // Send response JSON
+        cJSON *resJSON = user->JSON();
+        delete user;
+        cJSON_DeleteItemFromObject(resJSON, "password");
+        cJSON_DeleteItemFromObject(resJSON, "token");
         ESP_ERROR_CHECK(Instance->sendJSON(request, resJSON, Statuses::_200));
         cJSON_Delete(resJSON);
 

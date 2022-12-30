@@ -48,7 +48,8 @@
     "esp_tls_crypto.h": "c",
     "cstring": "cpp",
     "list": "cpp",
-    "sstream": "cpp"
+    "sstream": "cpp",
+    "random": "cpp"
   },
   "idf.port": "/dev/ttyACM0",
   "idf.flashType": "JTAG"

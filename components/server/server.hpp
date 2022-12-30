@@ -104,6 +104,7 @@ namespace server
         httpd_uri_t apiPostRegisterURIHandler = {"/api/register", Methods::POST, apiPostRegisterHandler};
         httpd_uri_t apiPostLoginURIHandler = {"/api/login", Methods::POST, apiPostLoginHandler};
         httpd_uri_t apiGetUsersURIHandler = {"/api/users", Methods::GET, apiGetUsersHandler};
+        httpd_uri_t apiGetUserURIHandler = {"/api/users/*", Methods::GET, apiGetUserHandler};
 
     private:
         void start();
@@ -113,6 +114,7 @@ namespace server
         esp_err_t sendError(httpd_req_t *request, Error error, const char *message);
         esp_err_t recvJSON(httpd_req_t *request, cJSON **json);
         user::User *checkToken(httpd_req_t *request);
+        const char *getPathParam(httpd_req_t *request);
         static void apFunc(void *args, esp_event_base_t base, int32_t id, void *data);
         static void staFunc(void *args, esp_event_base_t base, int32_t id, void *data);
         static void ipFunc(void *args, esp_event_base_t base, int32_t id, void *data);
@@ -121,6 +123,7 @@ namespace server
         static esp_err_t apiPostRegisterHandler(httpd_req_t *request);
         static esp_err_t apiPostLoginHandler(httpd_req_t *request);
         static esp_err_t apiGetUsersHandler(httpd_req_t *request);
+        static esp_err_t apiGetUserHandler(httpd_req_t *request);
 
     public:
         inline static Server *Instance;
