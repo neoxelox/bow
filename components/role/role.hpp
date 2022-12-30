@@ -10,12 +10,6 @@ namespace role
 
     static const char *DB_NAMESPACE = "role";
 
-    namespace System
-    {
-        static const char *ADMIN = "ADMIN";
-        static const char *MEMBER = "MEMBER";
-    }
-
     class Role
     {
     public:
@@ -34,6 +28,12 @@ namespace role
         Role &operator=(const Role &other);
         cJSON *JSON();
     };
+
+    namespace System
+    {
+        static const Role Admin = {"Admin", (const char **)calloc(1, sizeof(char *)), "0x1f6e1", "System", 0};
+        static const Role Guest = {"Guest", (const char **)calloc(1, sizeof(char *)), "0x1f441", "System", 0};
+    }
 
     class Controller
     {

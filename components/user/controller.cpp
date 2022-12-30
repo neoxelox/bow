@@ -94,6 +94,9 @@ namespace user
         Instance->logger = logger;
         Instance->db = database->Open(DB_NAMESPACE);
 
+        // Create or reset default system user
+        Instance->Set((User *)(&System::System));
+
         return Instance;
     }
 

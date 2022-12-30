@@ -124,6 +124,10 @@ namespace role
         Instance->logger = logger;
         Instance->db = database->Open(DB_NAMESPACE);
 
+        // Create or reset default system roles
+        Instance->Set((Role *)(&System::Admin));
+        Instance->Set((Role *)(&System::Guest));
+
         return Instance;
     }
 

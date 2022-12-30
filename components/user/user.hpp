@@ -32,6 +32,11 @@ namespace user
         cJSON *JSON();
     };
 
+    namespace System
+    {
+        static const User System = {"System", "", "", "Admin", "0x1f916", 0};
+    }
+
     class Controller
     {
     private:

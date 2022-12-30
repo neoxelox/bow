@@ -487,7 +487,7 @@ namespace server
             cJSON_GetObjectItem(reqJSON, "name")->valuestring,
             cJSON_GetObjectItem(reqJSON, "password")->valuestring,
             token,
-            Instance->user->Count() > 0 ? role::System::MEMBER : role::System::ADMIN,
+            Instance->user->Count() > 0 ? role::System::Guest.Name : role::System::Admin.Name,
             cJSON_GetObjectItem(reqJSON, "emoji")->valuestring,
             Instance->chron->Now());
 
@@ -509,6 +509,14 @@ namespace server
         // Bind request JSON
         cJSON *reqJSON = NULL;
         ESP_ERROR_CHECK(Instance->recvJSON(request, &reqJSON));
+
+        // Ensure not logging as the default system user
+        if (!strcmp(cJSON_GetObjectItem(reqJSON, "name")->valuestring, user::System::System.Name))
+        {
+            cJSON_Delete(reqJSON);
+            ESP_ERROR_CHECK(Instance->sendError(request, Errors::InvalidRequest, "Cannot log as System"));
+            return ESP_FAIL;
+        }
 
         // Get user
         user::User *user = Instance->user->Get(cJSON_GetObjectItem(reqJSON, "name")->valuestring);
