@@ -46,6 +46,7 @@ namespace trigger
         TaskHandle_t taskHandle;
 
     private:
+        const char *fixSchedule(const char *schedule);
         static void taskFunc(void *args);
 
     public:
@@ -60,5 +61,6 @@ namespace trigger
         void Set(Trigger *trigger);
         void Delete(const char *name);
         void Drop();
+        bool IsScheduleValid(const char *schedule);
     };
 }

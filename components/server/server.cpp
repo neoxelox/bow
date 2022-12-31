@@ -135,6 +135,7 @@ namespace server
 
         ESP_ERROR_CHECK(httpd_register_uri_handler(this->espServer, &this->apiGetTriggersURIHandler));
         ESP_ERROR_CHECK(httpd_register_uri_handler(this->espServer, &this->apiGetTriggerURIHandler));
+        ESP_ERROR_CHECK(httpd_register_uri_handler(this->espServer, &this->apiPostTriggersURIHandler));
 
         ESP_ERROR_CHECK(httpd_register_uri_handler(this->espServer, &this->apiGetRolesURIHandler));
         ESP_ERROR_CHECK(httpd_register_uri_handler(this->espServer, &this->apiGetRoleURIHandler));
@@ -949,6 +950,74 @@ namespace server
         // Send response JSON
         cJSON *resJSON = trigger->JSON();
         delete trigger;
+        ESP_ERROR_CHECK(Instance->sendJSON(request, resJSON, Statuses::_200));
+        cJSON_Delete(resJSON);
+
+        return ESP_OK;
+    }
+
+    esp_err_t Server::apiPostTriggersHandler(httpd_req_t *request)
+    {
+        // Authenticate request user
+        user::User *reqUser = Instance->checkToken(request);
+        if (reqUser == NULL)
+        {
+            ESP_ERROR_CHECK(Instance->sendError(request, Errors::Unauthorized, NULL));
+            return ESP_FAIL;
+        }
+
+        // Bind request JSON
+        cJSON *reqJSON = NULL;
+        ESP_ERROR_CHECK(Instance->recvJSON(request, &reqJSON));
+
+        // Check if a trigger with the same name already exists
+        trigger::Trigger *exTrigger = Instance->trigger->Get(cJSON_GetObjectItem(reqJSON, "name")->valuestring);
+        if (exTrigger != NULL)
+        {
+            delete exTrigger;
+            cJSON_Delete(reqJSON);
+            delete reqUser;
+            ESP_ERROR_CHECK(Instance->sendError(request, Errors::InvalidRequest, "Trigger already exists"));
+            return ESP_FAIL;
+        }
+
+        // Check if triggered actuator exists
+        device::Device *actuator = Instance->device->GetByName(cJSON_GetObjectItem(reqJSON, "actuator")->valuestring);
+        if (actuator == NULL)
+        {
+            cJSON_Delete(reqJSON);
+            delete reqUser;
+            ESP_ERROR_CHECK(Instance->sendError(request, Errors::InvalidRequest, "Actuator doesn't exist"));
+            return ESP_FAIL;
+        }
+
+        // Check if schedule is valid
+        if (!Instance->trigger->IsScheduleValid(cJSON_GetObjectItem(reqJSON, "schedule")->valuestring))
+        {
+            delete actuator;
+            cJSON_Delete(reqJSON);
+            delete reqUser;
+            ESP_ERROR_CHECK(Instance->sendError(request, Errors::InvalidRequest, "Schedule is invalid"));
+            return ESP_FAIL;
+        }
+
+        // Create new trigger
+        trigger::Trigger newTrigger(
+            cJSON_GetObjectItem(reqJSON, "name")->valuestring,
+            actuator->Name,
+            cJSON_GetObjectItem(reqJSON, "schedule")->valuestring,
+            cJSON_GetObjectItem(reqJSON, "emoji")->valuestring,
+            reqUser->Name,
+            Instance->chron->Now());
+
+        delete actuator;
+        cJSON_Delete(reqJSON);
+        delete reqUser;
+
+        Instance->trigger->Set(&newTrigger);
+
+        // Send response JSON
+        cJSON *resJSON = newTrigger.JSON();
         ESP_ERROR_CHECK(Instance->sendJSON(request, resJSON, Statuses::_200));
         cJSON_Delete(resJSON);
 

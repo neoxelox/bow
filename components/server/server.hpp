@@ -115,6 +115,7 @@ namespace server
 
         httpd_uri_t apiGetTriggersURIHandler = {"/api/triggers", Methods::GET, apiGetTriggersHandler};
         httpd_uri_t apiGetTriggerURIHandler = {"/api/triggers/*", Methods::GET, apiGetTriggerHandler};
+        httpd_uri_t apiPostTriggersURIHandler = {"/api/triggers", Methods::POST, apiPostTriggersHandler};
 
         httpd_uri_t apiGetRolesURIHandler = {"/api/roles", Methods::GET, apiGetRolesHandler};
         httpd_uri_t apiGetRoleURIHandler = {"/api/roles/*", Methods::GET, apiGetRoleHandler};
@@ -159,6 +160,7 @@ namespace server
 
         static esp_err_t apiGetTriggersHandler(httpd_req_t *request);
         static esp_err_t apiGetTriggerHandler(httpd_req_t *request);
+        static esp_err_t apiPostTriggersHandler(httpd_req_t *request);
 
         static esp_err_t apiGetRolesHandler(httpd_req_t *request);
         static esp_err_t apiGetRoleHandler(httpd_req_t *request);

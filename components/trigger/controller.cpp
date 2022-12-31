@@ -108,13 +108,19 @@ namespace trigger
         return Instance;
     }
 
+    const char *Controller::fixSchedule(const char *schedule)
+    {
+        // Match up to 1 minute fixing 59 on seconds
+        return strcat(strcpy((char *)malloc(strlen(schedule) + 3 + 1), "59 "), schedule);
+    }
+
     void Controller::taskFunc(void *args)
     {
         time_t now;
         time_t then;
         cron_expr schedule;
         const char *err;
-        char *expr;
+        const char *expr;
 
         while (1)
         {
@@ -132,12 +138,11 @@ namespace trigger
                 err = NULL;
                 expr = NULL;
 
-                // Match up to 1 minute fixing 59 on seconds
-                expr = (char *)malloc(strlen(triggers[i].Schedule) + 3 + 1);
-                strcpy(expr, "59 ");
+                // Fix schedule seconds
+                expr = Instance->fixSchedule(triggers[i].Schedule);
 
                 // Parse trigger schedule
-                cron_parse_expr(strcat(expr, triggers[i].Schedule), &schedule, &err);
+                cron_parse_expr(expr, &schedule, &err);
                 if (err != NULL)
                     ESP_ERROR_CHECK(ESP_ERR_INVALID_STATE);
                 free((void *)expr);
@@ -241,5 +246,18 @@ namespace trigger
     void Controller::Drop()
     {
         ESP_ERROR_CHECK(this->db->Drop());
+    }
+
+    bool Controller::IsScheduleValid(const char *schedule)
+    {
+        cron_expr ign;
+        const char *err;
+        memset(&ign, 0, sizeof(cron_expr));
+        const char *expr = this->fixSchedule(schedule);
+
+        cron_parse_expr(expr, &ign, &err);
+        free((void *)expr);
+
+        return err == NULL;
     }
 }
