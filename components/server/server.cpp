@@ -137,6 +137,7 @@ namespace server
         ESP_ERROR_CHECK(httpd_register_uri_handler(this->espServer, &this->apiGetTriggerURIHandler));
         ESP_ERROR_CHECK(httpd_register_uri_handler(this->espServer, &this->apiPostTriggersURIHandler));
         ESP_ERROR_CHECK(httpd_register_uri_handler(this->espServer, &this->apiPutTriggerURIHandler));
+        ESP_ERROR_CHECK(httpd_register_uri_handler(this->espServer, &this->apiDeleteTriggerURIHandler));
 
         ESP_ERROR_CHECK(httpd_register_uri_handler(this->espServer, &this->apiGetRolesURIHandler));
         ESP_ERROR_CHECK(httpd_register_uri_handler(this->espServer, &this->apiGetRoleURIHandler));
@@ -1162,6 +1163,52 @@ namespace server
 
         // Save trigger
         Instance->trigger->Set(trigger);
+
+        // Send response JSON
+        cJSON *resJSON = trigger->JSON();
+        delete trigger;
+        ESP_ERROR_CHECK(Instance->sendJSON(request, resJSON, Statuses::_200));
+        cJSON_Delete(resJSON);
+
+        return ESP_OK;
+    }
+
+    esp_err_t Server::apiDeleteTriggerHandler(httpd_req_t *request)
+    {
+        // Authenticate request user
+        user::User *reqUser = Instance->checkToken(request);
+        if (reqUser == NULL)
+        {
+            ESP_ERROR_CHECK(Instance->sendError(request, Errors::Unauthorized, NULL));
+            return ESP_FAIL;
+        }
+
+        // Get name path param
+        const char *name = Instance->getPathParam(request);
+
+        // Get trigger
+        trigger::Trigger *trigger = Instance->trigger->Get(name);
+        free((void *)name);
+        if (trigger == NULL)
+        {
+            delete reqUser;
+            ESP_ERROR_CHECK(Instance->sendError(request, Errors::InvalidRequest, "Trigger doesn't exist"));
+            return ESP_FAIL;
+        }
+
+        // Check if the requesting user role includes the triggered actuator or it is an admin
+        if (!Instance->role->Includes(reqUser->Role, trigger->Actuator) && !Instance->user->Belongs(reqUser, &role::System::Admin))
+        {
+            delete trigger;
+            delete reqUser;
+            ESP_ERROR_CHECK(Instance->sendError(request, Errors::NoPermission, "Cannot delete trigger"));
+            return ESP_FAIL;
+        }
+
+        delete reqUser;
+
+        // Delete trigger
+        Instance->trigger->Delete(trigger->Name);
 
         // Send response JSON
         cJSON *resJSON = trigger->JSON();
