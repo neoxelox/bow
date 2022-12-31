@@ -2,6 +2,7 @@
 #include "esp_err.h"
 #include "cJSON.h"
 #include "logger.hpp"
+#include "device.hpp"
 #include "database.hpp"
 #include "role.hpp"
 

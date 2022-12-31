@@ -2,6 +2,7 @@
 
 #include "cJSON.h"
 #include "logger.hpp"
+#include "role.hpp"
 #include "database.hpp"
 
 namespace user
@@ -55,5 +56,11 @@ namespace user
         void Delete(const char *name);
         void Drop();
         void GenerateToken(char *token);
+        bool Belongs(const char *user, const char *role);
+        bool Belongs(User *user, const char *role);
+        bool Belongs(const char *user, role::Role *role);
+        bool Belongs(const char *user, const role::Role *role);
+        bool Belongs(User *user, role::Role *role);
+        bool Belongs(User *user, const role::Role *role);
     };
 }

@@ -3,6 +3,7 @@
 #include "esp_random.h"
 #include "cJSON.h"
 #include "logger.hpp"
+#include "role.hpp"
 #include "database.hpp"
 #include "user.hpp"
 
@@ -178,5 +179,39 @@ namespace user
             token[i] = TOKEN_CHARSET[esp_random() % size];
 
         token[TOKEN_SIZE] = '\0';
+    }
+
+    bool Controller::Belongs(const char *user, const char *role)
+    {
+        User *userAux = this->Get(user);
+        bool ret = this->Belongs(userAux, role);
+        delete userAux;
+
+        return ret;
+    }
+
+    bool Controller::Belongs(User *user, const char *role)
+    {
+        return !strcmp(user->Role, role);
+    }
+
+    bool Controller::Belongs(const char *user, role::Role *role)
+    {
+        return this->Belongs(user, role->Name);
+    }
+
+    bool Controller::Belongs(const char *user, const role::Role *role)
+    {
+        return this->Belongs(user, role->Name);
+    }
+
+    bool Controller::Belongs(User *user, role::Role *role)
+    {
+        return this->Belongs(user, role->Name);
+    }
+
+    bool Controller::Belongs(User *user, const role::Role *role)
+    {
+        return this->Belongs(user, role->Name);
     }
 }

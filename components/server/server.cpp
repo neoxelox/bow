@@ -695,7 +695,7 @@ namespace server
         if (cJSON_GetObjectItem(reqJSON, "password") != NULL)
         {
             // Check if it is the requesting user or it is an admin
-            if (strcmp(reqUser->Name, user->Name) && strcmp(reqUser->Role, role::System::Admin.Name))
+            if (strcmp(reqUser->Name, user->Name) && !Instance->user->Belongs(reqUser, &role::System::Admin))
             {
                 delete reqUser;
                 delete user;
@@ -712,7 +712,7 @@ namespace server
         if (cJSON_GetObjectItem(reqJSON, "emoji") != NULL)
         {
             // Check if it is the requesting user or it is an admin
-            if (strcmp(reqUser->Name, user->Name) && strcmp(reqUser->Role, role::System::Admin.Name))
+            if (strcmp(reqUser->Name, user->Name) && !Instance->user->Belongs(reqUser, &role::System::Admin))
             {
                 delete reqUser;
                 delete user;
@@ -729,7 +729,7 @@ namespace server
         if (cJSON_GetObjectItem(reqJSON, "role") != NULL)
         {
             // Check if the requesting user is an admin
-            if (strcmp(reqUser->Role, role::System::Admin.Name))
+            if (!Instance->user->Belongs(reqUser, &role::System::Admin))
             {
                 delete reqUser;
                 delete user;
@@ -804,7 +804,7 @@ namespace server
         }
 
         // Check if it is the requesting user or it is an admin
-        if (strcmp(reqUser->Name, user->Name) && strcmp(reqUser->Role, role::System::Admin.Name))
+        if (strcmp(reqUser->Name, user->Name) && !Instance->user->Belongs(reqUser, &role::System::Admin))
         {
             delete reqUser;
             delete user;
@@ -848,7 +848,7 @@ namespace server
 
         // Filter devices depending if the requesting user role includes it or it is an admin
         for (int i = 0; i < size; i++)
-            if (Instance->role->Includes(reqUser->Role, &devices[i]) || !strcmp(reqUser->Role, role::System::Admin.Name))
+            if (Instance->role->Includes(reqUser->Role, &devices[i]) || Instance->user->Belongs(reqUser, &role::System::Admin))
                 cJSON_AddItemToArray(devicesJSON, devices[i].JSON());
 
         delete reqUser;
@@ -884,7 +884,7 @@ namespace server
         }
 
         // Check if the requesting user role includes the device or it is an admin
-        if (!Instance->role->Includes(reqUser->Role, device) && strcmp(reqUser->Role, role::System::Admin.Name))
+        if (!Instance->role->Includes(reqUser->Role, device) && !Instance->user->Belongs(reqUser, &role::System::Admin))
         {
             delete device;
             delete reqUser;
@@ -923,7 +923,7 @@ namespace server
 
         // Filter triggers depending if the requesting user role includes the triggered actuator or it is an admin
         for (int i = 0; i < size; i++)
-            if (Instance->role->Includes(reqUser->Role, triggers[i].Actuator) || !strcmp(reqUser->Role, role::System::Admin.Name))
+            if (Instance->role->Includes(reqUser->Role, triggers[i].Actuator) || Instance->user->Belongs(reqUser, &role::System::Admin))
                 cJSON_AddItemToArray(triggersJSON, triggers[i].JSON());
 
         delete reqUser;
@@ -959,7 +959,7 @@ namespace server
         }
 
         // Check if the requesting user role includes the triggered actuator or it is an admin
-        if (!Instance->role->Includes(reqUser->Role, trigger->Actuator) && strcmp(reqUser->Role, role::System::Admin.Name))
+        if (!Instance->role->Includes(reqUser->Role, trigger->Actuator) && !Instance->user->Belongs(reqUser, &role::System::Admin))
         {
             delete trigger;
             delete reqUser;
@@ -1014,7 +1014,7 @@ namespace server
         }
 
         // Check if the requesting user role includes the actuator or it is an admin
-        if (!Instance->role->Includes(reqUser->Role, actuator) && strcmp(reqUser->Role, role::System::Admin.Name))
+        if (!Instance->role->Includes(reqUser->Role, actuator) && !Instance->user->Belongs(reqUser, &role::System::Admin))
         {
             delete actuator;
             cJSON_Delete(reqJSON);
@@ -1284,7 +1284,7 @@ namespace server
         }
 
         // Check if the requesting user is an admin
-        if (strcmp(reqUser->Role, role::System::Admin.Name))
+        if (!Instance->user->Belongs(reqUser, &role::System::Admin))
         {
             delete reqUser;
             ESP_ERROR_CHECK(Instance->sendError(request, Errors::NoPermission, "Cannot change system wifi"));
@@ -1328,7 +1328,7 @@ namespace server
         }
 
         // Check if the requesting user is an admin
-        if (strcmp(reqUser->Role, role::System::Admin.Name))
+        if (!Instance->user->Belongs(reqUser, &role::System::Admin))
         {
             delete reqUser;
             ESP_ERROR_CHECK(Instance->sendError(request, Errors::NoPermission, "Cannot reset system"));
