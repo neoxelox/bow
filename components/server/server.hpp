@@ -112,6 +112,9 @@ namespace server
 
         httpd_uri_t apiGetDevicesURIHandler = {"/api/devices", Methods::GET, apiGetDevicesHandler};
         httpd_uri_t apiGetDeviceURIHandler = {"/api/devices/*", Methods::GET, apiGetDeviceHandler};
+        httpd_uri_t apiPostDevicesURIHandler = {"/api/devices", Methods::POST, apiPostDevicesHandler};
+        httpd_uri_t apiPutDeviceURIHandler = {"/api/devices/*", Methods::PUT, apiPutDeviceHandler};
+        httpd_uri_t apiDeleteDeviceURIHandler = {"/api/devices/*", Methods::DELETE, apiDeleteDeviceHandler};
 
         httpd_uri_t apiGetTriggersURIHandler = {"/api/triggers", Methods::GET, apiGetTriggersHandler};
         httpd_uri_t apiGetTriggerURIHandler = {"/api/triggers/*", Methods::GET, apiGetTriggerHandler};
@@ -121,6 +124,9 @@ namespace server
 
         httpd_uri_t apiGetRolesURIHandler = {"/api/roles", Methods::GET, apiGetRolesHandler};
         httpd_uri_t apiGetRoleURIHandler = {"/api/roles/*", Methods::GET, apiGetRoleHandler};
+        httpd_uri_t apiPostRolesURIHandler = {"/api/roles", Methods::POST, apiPostRolesHandler};
+        httpd_uri_t apiPutRoleURIHandler = {"/api/roles/*", Methods::PUT, apiPutRoleHandler};
+        httpd_uri_t apiDeleteRoleURIHandler = {"/api/roles/*", Methods::DELETE, apiDeleteRoleHandler};
 
         httpd_uri_t apiGetSystemInfoURIHandler = {"/api/system/info", Methods::GET, apiGetSystemInfoHandler};
         httpd_uri_t apiGetSystemTimeURIHandler = {"/api/system/time", Methods::GET, apiGetSystemTimeHandler};
@@ -151,14 +157,11 @@ namespace server
         static esp_err_t apiPutUserHandler(httpd_req_t *request);
         static esp_err_t apiDeleteUserHandler(httpd_req_t *request);
 
-        static esp_err_t apiGetSystemInfoHandler(httpd_req_t *request);
-        static esp_err_t apiGetSystemTimeHandler(httpd_req_t *request);
-        static esp_err_t apiGetSystemWifiHandler(httpd_req_t *request);
-        static esp_err_t apiPutSystemWifiHandler(httpd_req_t *request);
-        static esp_err_t apiDeleteSystemResetHandler(httpd_req_t *request);
-
         static esp_err_t apiGetDevicesHandler(httpd_req_t *request);
         static esp_err_t apiGetDeviceHandler(httpd_req_t *request);
+        static esp_err_t apiPostDevicesHandler(httpd_req_t *request);
+        static esp_err_t apiPutDeviceHandler(httpd_req_t *request);
+        static esp_err_t apiDeleteDeviceHandler(httpd_req_t *request);
 
         static esp_err_t apiGetTriggersHandler(httpd_req_t *request);
         static esp_err_t apiGetTriggerHandler(httpd_req_t *request);
@@ -168,6 +171,15 @@ namespace server
 
         static esp_err_t apiGetRolesHandler(httpd_req_t *request);
         static esp_err_t apiGetRoleHandler(httpd_req_t *request);
+        static esp_err_t apiPostRolesHandler(httpd_req_t *request);
+        static esp_err_t apiPutRoleHandler(httpd_req_t *request);
+        static esp_err_t apiDeleteRoleHandler(httpd_req_t *request);
+
+        static esp_err_t apiGetSystemInfoHandler(httpd_req_t *request);
+        static esp_err_t apiGetSystemTimeHandler(httpd_req_t *request);
+        static esp_err_t apiGetSystemWifiHandler(httpd_req_t *request);
+        static esp_err_t apiPutSystemWifiHandler(httpd_req_t *request);
+        static esp_err_t apiDeleteSystemResetHandler(httpd_req_t *request);
 
     public:
         inline static Server *Instance;

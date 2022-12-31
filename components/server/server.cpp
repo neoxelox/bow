@@ -132,6 +132,9 @@ namespace server
 
         ESP_ERROR_CHECK(httpd_register_uri_handler(this->espServer, &this->apiGetDevicesURIHandler));
         ESP_ERROR_CHECK(httpd_register_uri_handler(this->espServer, &this->apiGetDeviceURIHandler));
+        ESP_ERROR_CHECK(httpd_register_uri_handler(this->espServer, &this->apiPostDevicesURIHandler));
+        ESP_ERROR_CHECK(httpd_register_uri_handler(this->espServer, &this->apiPutDeviceURIHandler));
+        ESP_ERROR_CHECK(httpd_register_uri_handler(this->espServer, &this->apiDeleteDeviceURIHandler));
 
         ESP_ERROR_CHECK(httpd_register_uri_handler(this->espServer, &this->apiGetTriggersURIHandler));
         ESP_ERROR_CHECK(httpd_register_uri_handler(this->espServer, &this->apiGetTriggerURIHandler));
@@ -141,6 +144,9 @@ namespace server
 
         ESP_ERROR_CHECK(httpd_register_uri_handler(this->espServer, &this->apiGetRolesURIHandler));
         ESP_ERROR_CHECK(httpd_register_uri_handler(this->espServer, &this->apiGetRoleURIHandler));
+        ESP_ERROR_CHECK(httpd_register_uri_handler(this->espServer, &this->apiPostRolesURIHandler));
+        ESP_ERROR_CHECK(httpd_register_uri_handler(this->espServer, &this->apiPutRoleURIHandler));
+        ESP_ERROR_CHECK(httpd_register_uri_handler(this->espServer, &this->apiDeleteRoleURIHandler));
 
         ESP_ERROR_CHECK(httpd_register_uri_handler(this->espServer, &this->apiGetSystemInfoURIHandler));
         ESP_ERROR_CHECK(httpd_register_uri_handler(this->espServer, &this->apiGetSystemTimeURIHandler));
@@ -894,6 +900,21 @@ namespace server
         return ESP_OK;
     }
 
+    esp_err_t Server::apiPostDevicesHandler(httpd_req_t *request)
+    {
+        return ESP_OK;
+    }
+
+    esp_err_t Server::apiPutDeviceHandler(httpd_req_t *request)
+    {
+        return ESP_OK;
+    }
+
+    esp_err_t Server::apiDeleteDeviceHandler(httpd_req_t *request)
+    {
+        return ESP_OK;
+    }
+
     esp_err_t Server::apiGetTriggersHandler(httpd_req_t *request)
     {
         // Authenticate request user
@@ -1280,6 +1301,21 @@ namespace server
         ESP_ERROR_CHECK(Instance->sendJSON(request, resJSON, Statuses::_200));
         cJSON_Delete(resJSON);
 
+        return ESP_OK;
+    }
+
+    esp_err_t Server::apiPostRolesHandler(httpd_req_t *request)
+    {
+        return ESP_OK;
+    }
+
+    esp_err_t Server::apiPutRoleHandler(httpd_req_t *request)
+    {
+        return ESP_OK;
+    }
+
+    esp_err_t Server::apiDeleteRoleHandler(httpd_req_t *request)
+    {
         return ESP_OK;
     }
 
