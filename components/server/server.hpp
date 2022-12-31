@@ -114,6 +114,7 @@ namespace server
         httpd_uri_t apiGetSystemTimeURIHandler = {"/api/system/time", Methods::GET, apiGetSystemTimeHandler};
         httpd_uri_t apiGetSystemWiFiURIHandler = {"/api/system/wifi", Methods::GET, apiGetSystemWifiHandler};
         httpd_uri_t apiPutSystemWiFiURIHandler = {"/api/system/wifi", Methods::PUT, apiPutSystemWifiHandler};
+        httpd_uri_t apiDeleteSystemResetURIHandler = {"/api/system/reset", Methods::DELETE, apiDeleteSystemResetHandler};
 
     private:
         void start();
@@ -142,6 +143,7 @@ namespace server
         static esp_err_t apiGetSystemTimeHandler(httpd_req_t *request);
         static esp_err_t apiGetSystemWifiHandler(httpd_req_t *request);
         static esp_err_t apiPutSystemWifiHandler(httpd_req_t *request);
+        static esp_err_t apiDeleteSystemResetHandler(httpd_req_t *request);
 
     public:
         inline static Server *Instance;

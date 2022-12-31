@@ -10,6 +10,7 @@ namespace database
     static const char *TAG = "database";
 
     static const char *PARTITION = "database";
+    static const char *DB_NAMESPACE = "system";
 
     typedef bool (*db_find_cb_t)(const char *key, void *context);
 
@@ -37,6 +38,10 @@ namespace database
     {
     private:
         logger::Logger *logger;
+        database::Handle *db;
+
+    private:
+        void reset();
 
     public:
         inline static Database *Instance;
@@ -45,6 +50,6 @@ namespace database
     public:
         void Info(nvs_stats_t *info);
         Handle *Open(const char *nmspace);
-        void Reset();
+        void ScheduleReset();
     };
 }

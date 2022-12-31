@@ -134,6 +134,7 @@ namespace server
         ESP_ERROR_CHECK(httpd_register_uri_handler(this->espServer, &this->apiGetSystemTimeURIHandler));
         ESP_ERROR_CHECK(httpd_register_uri_handler(this->espServer, &this->apiGetSystemWiFiURIHandler));
         ESP_ERROR_CHECK(httpd_register_uri_handler(this->espServer, &this->apiPutSystemWiFiURIHandler));
+        ESP_ERROR_CHECK(httpd_register_uri_handler(this->espServer, &this->apiDeleteSystemResetURIHandler));
 
         // Register frontend handler, note that it has to be the last one to catch all other URLs
         ESP_ERROR_CHECK(httpd_register_uri_handler(this->espServer, &this->frontURIHandler));
@@ -1010,6 +1011,40 @@ namespace server
 
         // Try connecting to the new target Wi-Fi network
         Instance->provisioner->Retry();
+
+        return ESP_OK;
+    }
+
+    esp_err_t Server::apiDeleteSystemResetHandler(httpd_req_t *request)
+    {
+        // Authenticate request user
+        user::User *reqUser = Instance->checkToken(request);
+        if (reqUser == NULL)
+        {
+            ESP_ERROR_CHECK(Instance->sendError(request, Errors::Unauthorized, NULL));
+            return ESP_FAIL;
+        }
+
+        // Check if the requesting user is an admin
+        if (strcmp(reqUser->Role, role::System::Admin.Name))
+        {
+            delete reqUser;
+            ESP_ERROR_CHECK(Instance->sendError(request, Errors::NoPermission, "Cannot reset system"));
+            return ESP_FAIL;
+        }
+
+        delete reqUser;
+
+        // Send response JSON
+        cJSON *resJSON = cJSON_CreateObject();
+        ESP_ERROR_CHECK(Instance->sendJSON(request, resJSON, Statuses::_200));
+        cJSON_Delete(resJSON);
+
+        // Schedule database reset
+        Instance->database->ScheduleReset();
+
+        // Perform hardware reset to force database reset
+        esp_restart();
 
         return ESP_OK;
     }

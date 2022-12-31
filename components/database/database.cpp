@@ -20,7 +20,7 @@ namespace database
         esp_err_t err = nvs_flash_init_partition(PARTITION);
         // Database NVS partition has been truncated or format cannot be recognized
         if (err == ESP_ERR_NVS_NO_FREE_PAGES || err == ESP_ERR_NVS_NEW_VERSION_FOUND)
-            Instance->Reset();
+            Instance->reset();
         else if (err != ESP_OK)
             ESP_ERROR_CHECK(err);
 
@@ -29,6 +29,17 @@ namespace database
         Instance->logger->Debug(TAG, "NVS entries: Used %d | Free %d | Total %d",
                                 info.used_entries, info.free_entries, info.total_entries);
         Instance->logger->Debug(TAG, "NVS namespaces: Total %d", info.namespace_count);
+
+        Instance->db = Instance->Open(DB_NAMESPACE);
+
+        // Check if a reset has been scheduled
+        cJSON *reset = NULL;
+        ESP_ERROR_CHECK(Instance->db->Get("reset", &reset));
+        if (reset != NULL)
+        {
+            cJSON_Delete(reset);
+            Instance->reset();
+        }
 
         return Instance;
     }
@@ -49,11 +60,20 @@ namespace database
         return handle;
     }
 
-    void Database::Reset()
+    void Database::reset()
     {
+        this->logger->Debug(TAG, "Resetting database");
         ESP_ERROR_CHECK(nvs_flash_deinit_partition(PARTITION));
         ESP_ERROR_CHECK(nvs_flash_erase_partition(PARTITION));
         ESP_ERROR_CHECK(nvs_flash_init_partition(PARTITION));
+        this->logger->Debug(TAG, "Database reset");
+    }
+
+    void Database::ScheduleReset()
+    {
+        cJSON *json = cJSON_CreateObject();
+        ESP_ERROR_CHECK(this->db->Set("reset", json));
+        cJSON_Delete(json);
     }
 
     esp_err_t Handle::Drop()
