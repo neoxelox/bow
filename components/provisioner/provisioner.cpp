@@ -407,15 +407,27 @@ namespace provisioner
         {
             vTaskDelay(STA_RETRY_PERIOD);
 
+            // Get current Wi-Fi mode
+            wifi_mode_t mode = Instance->GetMode();
+
             // Get stored Wi-Fi credentials
             creds = Instance->GetCreds();
 
+            // Get current Wi-Fi network
+            wifi_ap_record_t current;
+            if (mode == WIFI_MODE_STA)
+                Instance->GetCurrent(&current);
+
             // Go into station mode if credentials exists and Wi-Fi is not already station
-            if (creds != NULL && Instance->GetMode() != WIFI_MODE_STA)
+            // or credentials are different from the current Wi-Fi network
+            if (creds != NULL && (mode != WIFI_MODE_STA || strcmp(creds->SSID, (char *)current.ssid)))
             {
                 Instance->logger->Debug(TAG, "Wi-Fi credentials found");
                 Instance->logger->Debug(TAG, "Going into station mode: {\"ssid\":\"%s\",\"password\":\"%s\"}", creds->SSID, creds->Password);
-                Instance->apStop();
+                if (mode == WIFI_MODE_STA)
+                    Instance->staStop();
+                else
+                    Instance->apStop();
                 Instance->staStart(creds);
             }
 
@@ -437,6 +449,13 @@ namespace provisioner
         ESP_ERROR_CHECK(esp_wifi_sta_get_ap_info(current));
     }
 
+    void Provisioner::Retry()
+    {
+        // Suspend is needed because the provisioner task is in blocked state by delay
+        vTaskSuspend(this->taskHandle);
+        vTaskResume(this->taskHandle);
+    }
+
     Credentials *Provisioner::GetCreds()
     {
         // TODO: Decrypt password
@@ -444,7 +463,7 @@ namespace provisioner
         Credentials *creds = NULL;
 
         cJSON *credsJSON = NULL;
-        ESP_ERROR_CHECK(Instance->db->Get("credentials", &credsJSON));
+        ESP_ERROR_CHECK(this->db->Get("credentials", &credsJSON));
 
         if (credsJSON != NULL)
             creds = new Credentials(credsJSON);
@@ -459,7 +478,7 @@ namespace provisioner
         // TODO: Encrypt password
 
         cJSON *credsJSON = creds->JSON();
-        ESP_ERROR_CHECK(db->Set("credentials", credsJSON));
+        ESP_ERROR_CHECK(this->db->Set("credentials", credsJSON));
         cJSON_Delete(credsJSON);
     }
 }

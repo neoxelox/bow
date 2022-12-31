@@ -201,18 +201,18 @@ void dns_server_task(void *pvParameters)
             ESP_LOGE(TAG, "Unable to create socket: errno %d", errno);
             break;
         }
-        ESP_LOGI(TAG, "Socket created");
+        ESP_LOGD(TAG, "Socket created");
 
         int err = bind(dns_server_socket, (struct sockaddr *)&dest_addr, sizeof(dest_addr));
         if (err < 0)
         {
             ESP_LOGE(TAG, "Socket unable to bind: errno %d", errno);
         }
-        ESP_LOGI(TAG, "Socket bound, port %d", DNS_PORT);
+        ESP_LOGD(TAG, "Socket bound, port %d", DNS_PORT);
 
         while (1)
         {
-            ESP_LOGI(TAG, "Waiting for data");
+            ESP_LOGD(TAG, "Waiting for data");
             struct sockaddr_in6 source_addr; // Large enough for both IPv4 or IPv6
             socklen_t socklen = sizeof(source_addr);
             int len = recvfrom(dns_server_socket, rx_buffer, sizeof(rx_buffer) - 1, 0, (struct sockaddr *)&source_addr, &socklen);
@@ -243,7 +243,7 @@ void dns_server_task(void *pvParameters)
                 char reply[DNS_MAX_LEN];
                 int reply_len = parse_dns_request(rx_buffer, len, reply, DNS_MAX_LEN);
 
-                ESP_LOGI(TAG, "Received %d bytes from %s | DNS reply with len: %d", len, addr_str, reply_len);
+                ESP_LOGD(TAG, "Received %d bytes from %s | DNS reply with len: %d", len, addr_str, reply_len);
                 if (reply_len <= 0)
                 {
                     ESP_LOGE(TAG, "Failed to prepare a DNS reply");
@@ -273,6 +273,7 @@ void dns_server_task(void *pvParameters)
 void capdns_start(UBaseType_t priority)
 {
     xTaskCreatePinnedToCore(dns_server_task, "capdns", 4096, NULL, priority, &dns_server_task_handle, tskNO_AFFINITY);
+    ESP_LOGD(TAG, "Started DNS server");
 }
 
 void capdns_stop(void)
@@ -280,4 +281,5 @@ void capdns_stop(void)
     vTaskDelete(dns_server_task_handle);
     shutdown(dns_server_socket, 0);
     close(dns_server_socket);
+    ESP_LOGD(TAG, "Stopped DNS server");
 }

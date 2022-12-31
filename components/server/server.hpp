@@ -80,7 +80,7 @@ namespace server
     {
         static const Error InvalidRequest = {"ERR_INVALID_REQUEST", Statuses::_400};
         static const Error Unauthorized = {"ERR_UNAUTHORIZED", Statuses::_401};
-        static const Error NotPermission = {"ERR_NOT_PERMISSION", Statuses::_403};
+        static const Error NoPermission = {"ERR_NO_PERMISSION", Statuses::_403};
         static const Error NotFound = {"ERR_NOT_FOUND", Statuses::_404};
         static const Error ServerGeneric = {"ERR_SERVER_GENERIC", Statuses::_500};
     }
@@ -113,6 +113,7 @@ namespace server
         httpd_uri_t apiGetSystemInfoURIHandler = {"/api/system/info", Methods::GET, apiGetSystemInfoHandler};
         httpd_uri_t apiGetSystemTimeURIHandler = {"/api/system/time", Methods::GET, apiGetSystemTimeHandler};
         httpd_uri_t apiGetSystemWiFiURIHandler = {"/api/system/wifi", Methods::GET, apiGetSystemWifiHandler};
+        httpd_uri_t apiPutSystemWiFiURIHandler = {"/api/system/wifi", Methods::PUT, apiPutSystemWifiHandler};
 
     private:
         void start();
@@ -140,6 +141,7 @@ namespace server
         static esp_err_t apiGetSystemInfoHandler(httpd_req_t *request);
         static esp_err_t apiGetSystemTimeHandler(httpd_req_t *request);
         static esp_err_t apiGetSystemWifiHandler(httpd_req_t *request);
+        static esp_err_t apiPutSystemWifiHandler(httpd_req_t *request);
 
     public:
         inline static Server *Instance;

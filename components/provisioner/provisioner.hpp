@@ -68,6 +68,7 @@ namespace provisioner
     public:
         wifi_mode_t GetMode() const;
         void GetCurrent(wifi_ap_record_t *current);
+        void Retry();
         Credentials *GetCreds();
         void SetCreds(Credentials *creds);
     };

@@ -133,6 +133,7 @@ namespace server
         ESP_ERROR_CHECK(httpd_register_uri_handler(this->espServer, &this->apiGetSystemInfoURIHandler));
         ESP_ERROR_CHECK(httpd_register_uri_handler(this->espServer, &this->apiGetSystemTimeURIHandler));
         ESP_ERROR_CHECK(httpd_register_uri_handler(this->espServer, &this->apiGetSystemWiFiURIHandler));
+        ESP_ERROR_CHECK(httpd_register_uri_handler(this->espServer, &this->apiPutSystemWiFiURIHandler));
 
         // Register frontend handler, note that it has to be the last one to catch all other URLs
         ESP_ERROR_CHECK(httpd_register_uri_handler(this->espServer, &this->frontURIHandler));
@@ -497,7 +498,7 @@ namespace server
         char token[user::TOKEN_SIZE + 1];
         Instance->user->GenerateToken(token);
 
-        // Create the new user
+        // Create new user
         user::User newUser(
             cJSON_GetObjectItem(reqJSON, "name")->valuestring,
             cJSON_GetObjectItem(reqJSON, "password")->valuestring,
@@ -529,7 +530,7 @@ namespace server
         if (!strcmp(cJSON_GetObjectItem(reqJSON, "name")->valuestring, user::System::System.Name))
         {
             cJSON_Delete(reqJSON);
-            ESP_ERROR_CHECK(Instance->sendError(request, Errors::NotPermission, "Cannot log as System user"));
+            ESP_ERROR_CHECK(Instance->sendError(request, Errors::NoPermission, "Cannot log as System user"));
             return ESP_FAIL;
         }
 
@@ -538,7 +539,7 @@ namespace server
         if (user == NULL)
         {
             cJSON_Delete(reqJSON);
-            ESP_ERROR_CHECK(Instance->sendError(request, Errors::NotPermission, "User doesn't exist"));
+            ESP_ERROR_CHECK(Instance->sendError(request, Errors::NoPermission, "User doesn't exist"));
             return ESP_FAIL;
         }
 
@@ -547,7 +548,7 @@ namespace server
         {
             cJSON_Delete(reqJSON);
             delete user;
-            ESP_ERROR_CHECK(Instance->sendError(request, Errors::NotPermission, "Passwords don't match"));
+            ESP_ERROR_CHECK(Instance->sendError(request, Errors::NoPermission, "Passwords don't match"));
             return ESP_FAIL;
         }
 
@@ -661,7 +662,7 @@ namespace server
         {
             delete reqUser;
             free((void *)name);
-            ESP_ERROR_CHECK(Instance->sendError(request, Errors::NotPermission, "Cannot modify System user"));
+            ESP_ERROR_CHECK(Instance->sendError(request, Errors::NoPermission, "Cannot modify System user"));
             return ESP_FAIL;
         }
 
@@ -688,7 +689,7 @@ namespace server
                 delete reqUser;
                 delete user;
                 cJSON_Delete(reqJSON);
-                ESP_ERROR_CHECK(Instance->sendError(request, Errors::NotPermission, "Cannot change password of another user"));
+                ESP_ERROR_CHECK(Instance->sendError(request, Errors::NoPermission, "Cannot change password of another user"));
                 return ESP_FAIL;
             }
 
@@ -705,7 +706,7 @@ namespace server
                 delete reqUser;
                 delete user;
                 cJSON_Delete(reqJSON);
-                ESP_ERROR_CHECK(Instance->sendError(request, Errors::NotPermission, "Cannot change emoji of another user"));
+                ESP_ERROR_CHECK(Instance->sendError(request, Errors::NoPermission, "Cannot change emoji of another user"));
                 return ESP_FAIL;
             }
 
@@ -722,7 +723,7 @@ namespace server
                 delete reqUser;
                 delete user;
                 cJSON_Delete(reqJSON);
-                ESP_ERROR_CHECK(Instance->sendError(request, Errors::NotPermission, "Cannot change role of another user"));
+                ESP_ERROR_CHECK(Instance->sendError(request, Errors::NoPermission, "Cannot change role of another user"));
                 return ESP_FAIL;
             }
 
@@ -777,7 +778,7 @@ namespace server
         {
             delete reqUser;
             free((void *)name);
-            ESP_ERROR_CHECK(Instance->sendError(request, Errors::NotPermission, "Cannot delete System user"));
+            ESP_ERROR_CHECK(Instance->sendError(request, Errors::NoPermission, "Cannot delete System user"));
             return ESP_FAIL;
         }
 
@@ -796,7 +797,7 @@ namespace server
         {
             delete reqUser;
             delete user;
-            ESP_ERROR_CHECK(Instance->sendError(request, Errors::NotPermission, "Cannot delete another user"));
+            ESP_ERROR_CHECK(Instance->sendError(request, Errors::NoPermission, "Cannot delete another user"));
             return ESP_FAIL;
         }
 
@@ -965,6 +966,50 @@ namespace server
         // Send response JSON
         ESP_ERROR_CHECK(Instance->sendJSON(request, resJSON, Statuses::_200));
         cJSON_Delete(resJSON);
+
+        return ESP_OK;
+    }
+
+    esp_err_t Server::apiPutSystemWifiHandler(httpd_req_t *request)
+    {
+        // Authenticate request user
+        user::User *reqUser = Instance->checkToken(request);
+        if (reqUser == NULL)
+        {
+            ESP_ERROR_CHECK(Instance->sendError(request, Errors::Unauthorized, NULL));
+            return ESP_FAIL;
+        }
+
+        // Check if the requesting user is an admin
+        if (strcmp(reqUser->Role, role::System::Admin.Name))
+        {
+            delete reqUser;
+            ESP_ERROR_CHECK(Instance->sendError(request, Errors::NoPermission, "Cannot change system wifi"));
+            return ESP_FAIL;
+        }
+
+        delete reqUser;
+
+        // Bind request JSON
+        cJSON *reqJSON = NULL;
+        ESP_ERROR_CHECK(Instance->recvJSON(request, &reqJSON));
+
+        // Create new credentials
+        provisioner::Credentials creds(cJSON_GetObjectItem(reqJSON, "name")->valuestring,
+                                       cJSON_GetObjectItem(reqJSON, "password")->valuestring);
+        cJSON_Delete(reqJSON);
+
+        // Save credentials
+        Instance->provisioner->SetCreds(&creds);
+
+        // Send response JSON
+        cJSON *resJSON = cJSON_CreateObject();
+        cJSON_AddStringToObject(resJSON, "name", creds.SSID);
+        ESP_ERROR_CHECK(Instance->sendJSON(request, resJSON, Statuses::_200));
+        cJSON_Delete(resJSON);
+
+        // Try connecting to the new target Wi-Fi network
+        Instance->provisioner->Retry();
 
         return ESP_OK;
     }
