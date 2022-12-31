@@ -114,6 +114,21 @@ namespace role
         return root;
     }
 
+    bool Role::Equals(const char *name) const
+    {
+        return !strcmp(this->Name, name);
+    }
+
+    bool Role::Equals(Role *other) const
+    {
+        return this->Equals(other->Name);
+    }
+
+    bool Role::Equals(const Role *other) const
+    {
+        return this->Equals(other->Name);
+    }
+
     Controller *Controller::New(logger::Logger *logger, database::Database *database)
     {
         if (Instance != NULL)

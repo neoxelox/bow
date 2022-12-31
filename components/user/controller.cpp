@@ -84,6 +84,21 @@ namespace user
         return root;
     }
 
+    bool User::Equals(const char *name) const
+    {
+        return !strcmp(this->Name, name);
+    }
+
+    bool User::Equals(User *other) const
+    {
+        return this->Equals(other->Name);
+    }
+
+    bool User::Equals(const User *other) const
+    {
+        return this->Equals(other->Name);
+    }
+
     Controller *Controller::New(logger::Logger *logger, database::Database *database)
     {
         if (Instance != NULL)

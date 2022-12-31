@@ -31,6 +31,9 @@ namespace user
         ~User();
         User &operator=(const User &other);
         cJSON *JSON();
+        bool Equals(const char *name) const;
+        bool Equals(User *other) const;
+        bool Equals(const User *other) const;
     };
 
     namespace System

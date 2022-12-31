@@ -33,6 +33,9 @@ namespace trigger
         ~Trigger();
         Trigger &operator=(const Trigger &other);
         cJSON *JSON();
+        bool Equals(const char *name) const;
+        bool Equals(Trigger *other) const;
+        bool Equals(const Trigger *other) const;
     };
 
     class Controller

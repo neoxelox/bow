@@ -87,6 +87,21 @@ namespace trigger
         return root;
     }
 
+    bool Trigger::Equals(const char *name) const
+    {
+        return !strcmp(this->Name, name);
+    }
+
+    bool Trigger::Equals(Trigger *other) const
+    {
+        return this->Equals(other->Name);
+    }
+
+    bool Trigger::Equals(const Trigger *other) const
+    {
+        return this->Equals(other->Name);
+    }
+
     Controller *Controller::New(logger::Logger *logger, chron::Controller *chron, device::Transmitter *transmitter,
                                 device::Controller *device, database::Database *database)
     {

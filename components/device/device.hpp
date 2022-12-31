@@ -135,6 +135,9 @@ namespace device
         ~Device();
         Device &operator=(const Device &other);
         cJSON *JSON();
+        bool Equals(const char *name) const;
+        bool Equals(Device *other) const;
+        bool Equals(const Device *other) const;
     };
 
     class Controller

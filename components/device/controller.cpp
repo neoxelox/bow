@@ -193,6 +193,21 @@ namespace device
         return root;
     }
 
+    bool Device::Equals(const char *name) const
+    {
+        return !strcmp(this->Name, name);
+    }
+
+    bool Device::Equals(Device *other) const
+    {
+        return this->Equals(other->Name);
+    }
+
+    bool Device::Equals(const Device *other) const
+    {
+        return this->Equals(other->Name);
+    }
+
     Controller *Controller::New(logger::Logger *logger, database::Database *database)
     {
         if (Instance != NULL)

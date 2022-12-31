@@ -538,7 +538,7 @@ namespace server
         ESP_ERROR_CHECK(Instance->recvJSON(request, &reqJSON));
 
         // Ensure not logging as the default system user
-        if (!strcmp(cJSON_GetObjectItem(reqJSON, "name")->valuestring, user::System::System.Name))
+        if (user::System::System.Equals(cJSON_GetObjectItem(reqJSON, "name")->valuestring))
         {
             cJSON_Delete(reqJSON);
             ESP_ERROR_CHECK(Instance->sendError(request, Errors::NoPermission, "Cannot log as System user"));
@@ -669,7 +669,7 @@ namespace server
         const char *name = Instance->getPathParam(request);
 
         // Ensure not modifying the default system user
-        if (!strcmp(name, user::System::System.Name))
+        if (user::System::System.Equals(name))
         {
             delete reqUser;
             free((void *)name);
@@ -695,7 +695,7 @@ namespace server
         if (cJSON_GetObjectItem(reqJSON, "password") != NULL)
         {
             // Check if it is the requesting user or it is an admin
-            if (strcmp(reqUser->Name, user->Name) && !Instance->user->Belongs(reqUser, &role::System::Admin))
+            if (!reqUser->Equals(user) && !Instance->user->Belongs(reqUser, &role::System::Admin))
             {
                 delete reqUser;
                 delete user;
@@ -712,7 +712,7 @@ namespace server
         if (cJSON_GetObjectItem(reqJSON, "emoji") != NULL)
         {
             // Check if it is the requesting user or it is an admin
-            if (strcmp(reqUser->Name, user->Name) && !Instance->user->Belongs(reqUser, &role::System::Admin))
+            if (!reqUser->Equals(user) && !Instance->user->Belongs(reqUser, &role::System::Admin))
             {
                 delete reqUser;
                 delete user;
@@ -785,7 +785,7 @@ namespace server
         const char *name = Instance->getPathParam(request);
 
         // Ensure not deleting the default system user
-        if (!strcmp(name, user::System::System.Name))
+        if (user::System::System.Equals(name))
         {
             delete reqUser;
             free((void *)name);
@@ -804,7 +804,7 @@ namespace server
         }
 
         // Check if it is the requesting user or it is an admin
-        if (strcmp(reqUser->Name, user->Name) && !Instance->user->Belongs(reqUser, &role::System::Admin))
+        if (!reqUser->Equals(user) && !Instance->user->Belongs(reqUser, &role::System::Admin))
         {
             delete reqUser;
             delete user;

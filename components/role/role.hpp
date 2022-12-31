@@ -28,6 +28,9 @@ namespace role
         ~Role();
         Role &operator=(const Role &other);
         cJSON *JSON();
+        bool Equals(const char *name) const;
+        bool Equals(Role *other) const;
+        bool Equals(const Role *other) const;
     };
 
     namespace System
