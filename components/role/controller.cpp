@@ -200,4 +200,32 @@ namespace role
     {
         ESP_ERROR_CHECK(this->db->Drop());
     }
+
+    bool Controller::Includes(const char *role, const char *device)
+    {
+        Role *roleAux = this->Get(role);
+        bool ret = this->Includes(roleAux, device);
+        delete roleAux;
+
+        return ret;
+    }
+
+    bool Controller::Includes(Role *role, const char *device)
+    {
+        for (int i = 0; role->Devices[i] != NULL; i++)
+            if (!strcmp(role->Devices[i], device))
+                return true;
+
+        return false;
+    }
+
+    bool Controller::Includes(const char *role, device::Device *device)
+    {
+        return this->Includes(role, device->Name);
+    }
+
+    bool Controller::Includes(Role *role, device::Device *device)
+    {
+        return this->Includes(role, device->Name);
+    }
 }

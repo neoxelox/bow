@@ -838,8 +838,6 @@ namespace server
             return ESP_FAIL;
         }
 
-        delete reqUser;
-
         // Get all devices
         uint32_t size;
         device::Device *devices = Instance->device->List(&size);
@@ -848,9 +846,12 @@ namespace server
         cJSON *resJSON = cJSON_CreateObject();
         cJSON *devicesJSON = cJSON_AddArrayToObject(resJSON, "devices");
 
+        // Filter devices depending if the requesting user role includes it or it is an admin
         for (int i = 0; i < size; i++)
-            cJSON_AddItemToArray(devicesJSON, devices[i].JSON());
+            if (Instance->role->Includes(reqUser->Role, &devices[i]) || !strcmp(reqUser->Role, role::System::Admin.Name))
+                cJSON_AddItemToArray(devicesJSON, devices[i].JSON());
 
+        delete reqUser;
         delete[] devices;
 
         ESP_ERROR_CHECK(Instance->sendJSON(request, resJSON, Statuses::_200));
@@ -869,8 +870,6 @@ namespace server
             return ESP_FAIL;
         }
 
-        delete reqUser;
-
         // Get name path param
         const char *name = Instance->getPathParam(request);
 
@@ -879,9 +878,21 @@ namespace server
         free((void *)name);
         if (device == NULL)
         {
+            delete reqUser;
             ESP_ERROR_CHECK(Instance->sendError(request, Errors::InvalidRequest, "Device doesn't exist"));
             return ESP_FAIL;
         }
+
+        // Check if the requesting user role includes the device or it is an admin
+        if (!Instance->role->Includes(reqUser->Role, device) && strcmp(reqUser->Role, role::System::Admin.Name))
+        {
+            delete device;
+            delete reqUser;
+            ESP_ERROR_CHECK(Instance->sendError(request, Errors::NoPermission, "Cannot get device"));
+            return ESP_FAIL;
+        }
+
+        delete reqUser;
 
         // Send response JSON
         cJSON *resJSON = device->JSON();
@@ -902,8 +913,6 @@ namespace server
             return ESP_FAIL;
         }
 
-        delete reqUser;
-
         // Get all triggers
         uint32_t size;
         trigger::Trigger *triggers = Instance->trigger->List(&size);
@@ -912,9 +921,12 @@ namespace server
         cJSON *resJSON = cJSON_CreateObject();
         cJSON *triggersJSON = cJSON_AddArrayToObject(resJSON, "triggers");
 
+        // Filter triggers depending if the requesting user role includes the triggered actuator or it is an admin
         for (int i = 0; i < size; i++)
-            cJSON_AddItemToArray(triggersJSON, triggers[i].JSON());
+            if (Instance->role->Includes(reqUser->Role, triggers[i].Actuator) || !strcmp(reqUser->Role, role::System::Admin.Name))
+                cJSON_AddItemToArray(triggersJSON, triggers[i].JSON());
 
+        delete reqUser;
         delete[] triggers;
 
         ESP_ERROR_CHECK(Instance->sendJSON(request, resJSON, Statuses::_200));
@@ -933,8 +945,6 @@ namespace server
             return ESP_FAIL;
         }
 
-        delete reqUser;
-
         // Get name path param
         const char *name = Instance->getPathParam(request);
 
@@ -943,9 +953,21 @@ namespace server
         free((void *)name);
         if (trigger == NULL)
         {
+            delete reqUser;
             ESP_ERROR_CHECK(Instance->sendError(request, Errors::InvalidRequest, "Trigger doesn't exist"));
             return ESP_FAIL;
         }
+
+        // Check if the requesting user role includes the triggered actuator or it is an admin
+        if (!Instance->role->Includes(reqUser->Role, trigger->Actuator) && strcmp(reqUser->Role, role::System::Admin.Name))
+        {
+            delete trigger;
+            delete reqUser;
+            ESP_ERROR_CHECK(Instance->sendError(request, Errors::NoPermission, "Cannot get trigger"));
+            return ESP_FAIL;
+        }
+
+        delete reqUser;
 
         // Send response JSON
         cJSON *resJSON = trigger->JSON();
@@ -988,6 +1010,16 @@ namespace server
             cJSON_Delete(reqJSON);
             delete reqUser;
             ESP_ERROR_CHECK(Instance->sendError(request, Errors::InvalidRequest, "Actuator doesn't exist"));
+            return ESP_FAIL;
+        }
+
+        // Check if the requesting user role includes the actuator or it is an admin
+        if (!Instance->role->Includes(reqUser->Role, actuator) && strcmp(reqUser->Role, role::System::Admin.Name))
+        {
+            delete actuator;
+            cJSON_Delete(reqJSON);
+            delete reqUser;
+            ESP_ERROR_CHECK(Instance->sendError(request, Errors::NoPermission, "Cannot create trigger"));
             return ESP_FAIL;
         }
 

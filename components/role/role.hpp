@@ -2,6 +2,7 @@
 
 #include "cJSON.h"
 #include "logger.hpp"
+#include "device.hpp"
 #include "database.hpp"
 
 namespace role
@@ -52,5 +53,9 @@ namespace role
         void Set(Role *role);
         void Delete(const char *name);
         void Drop();
+        bool Includes(const char *role, const char *device);
+        bool Includes(Role *role, const char *device);
+        bool Includes(const char *role, device::Device *device);
+        bool Includes(Role *role, device::Device *device);
     };
 }
