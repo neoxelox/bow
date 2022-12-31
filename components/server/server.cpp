@@ -1306,6 +1306,78 @@ namespace server
 
     esp_err_t Server::apiPostRolesHandler(httpd_req_t *request)
     {
+        // Authenticate request user
+        user::User *reqUser = Instance->checkToken(request);
+        if (reqUser == NULL)
+        {
+            ESP_ERROR_CHECK(Instance->sendError(request, Errors::Unauthorized, NULL));
+            return ESP_FAIL;
+        }
+
+        // Check if the requesting user is an admin
+        if (!Instance->user->Belongs(reqUser, &role::System::Admin))
+        {
+            delete reqUser;
+            ESP_ERROR_CHECK(Instance->sendError(request, Errors::NoPermission, "Cannot create role"));
+            return ESP_FAIL;
+        }
+
+        // Bind request JSON
+        cJSON *reqJSON = NULL;
+        ESP_ERROR_CHECK(Instance->recvJSON(request, &reqJSON));
+
+        // Check if a role with the same name already exists
+        role::Role *exRole = Instance->role->Get(cJSON_GetObjectItem(reqJSON, "name")->valuestring);
+        if (exRole != NULL)
+        {
+            delete exRole;
+            cJSON_Delete(reqJSON);
+            delete reqUser;
+            ESP_ERROR_CHECK(Instance->sendError(request, Errors::InvalidRequest, "Role already exists"));
+            return ESP_FAIL;
+        }
+
+        // Check if included devices exist
+        cJSON *reqDevices = cJSON_GetObjectItem(reqJSON, "devices");
+        int size = cJSON_GetArraySize(reqDevices);
+        const char **devices = (const char **)malloc((size + 1) * sizeof(char *));
+
+        for (int i = 0; i < size; i++)
+        {
+            device::Device *device = Instance->device->GetByName(cJSON_GetArrayItem(reqDevices, i)->valuestring);
+            if (device == NULL)
+            {
+                free((void *)devices);
+                cJSON_Delete(reqJSON);
+                delete reqUser;
+                ESP_ERROR_CHECK(Instance->sendError(request, Errors::InvalidRequest, "Device doesn't exist"));
+                return ESP_FAIL;
+            }
+
+            devices[i] = strdup(device->Name);
+            delete device;
+        }
+        devices[size] = NULL;
+
+        // Create new role
+        role::Role newRole(
+            cJSON_GetObjectItem(reqJSON, "name")->valuestring,
+            devices,
+            cJSON_GetObjectItem(reqJSON, "emoji")->valuestring,
+            reqUser->Name,
+            Instance->chron->Now());
+
+        free((void *)devices);
+        cJSON_Delete(reqJSON);
+        delete reqUser;
+
+        Instance->role->Set(&newRole);
+
+        // Send response JSON
+        cJSON *resJSON = newRole.JSON();
+        ESP_ERROR_CHECK(Instance->sendJSON(request, resJSON, Statuses::_200));
+        cJSON_Delete(resJSON);
+
         return ESP_OK;
     }
 
