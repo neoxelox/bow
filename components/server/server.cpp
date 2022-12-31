@@ -136,6 +136,7 @@ namespace server
         ESP_ERROR_CHECK(httpd_register_uri_handler(this->espServer, &this->apiGetTriggersURIHandler));
         ESP_ERROR_CHECK(httpd_register_uri_handler(this->espServer, &this->apiGetTriggerURIHandler));
         ESP_ERROR_CHECK(httpd_register_uri_handler(this->espServer, &this->apiPostTriggersURIHandler));
+        ESP_ERROR_CHECK(httpd_register_uri_handler(this->espServer, &this->apiPutTriggerURIHandler));
 
         ESP_ERROR_CHECK(httpd_register_uri_handler(this->espServer, &this->apiGetRolesURIHandler));
         ESP_ERROR_CHECK(httpd_register_uri_handler(this->espServer, &this->apiGetRoleURIHandler));
@@ -687,6 +688,15 @@ namespace server
             return ESP_FAIL;
         }
 
+        // Check if it is the requesting user or it is an admin
+        if (!reqUser->Equals(user) && !Instance->user->Belongs(reqUser, &role::System::Admin))
+        {
+            delete reqUser;
+            delete user;
+            ESP_ERROR_CHECK(Instance->sendError(request, Errors::NoPermission, "Cannot modify another user"));
+            return ESP_FAIL;
+        }
+
         // Bind request JSON
         cJSON *reqJSON = NULL;
         ESP_ERROR_CHECK(Instance->recvJSON(request, &reqJSON));
@@ -694,16 +704,6 @@ namespace server
         // Update password if present
         if (cJSON_GetObjectItem(reqJSON, "password") != NULL)
         {
-            // Check if it is the requesting user or it is an admin
-            if (!reqUser->Equals(user) && !Instance->user->Belongs(reqUser, &role::System::Admin))
-            {
-                delete reqUser;
-                delete user;
-                cJSON_Delete(reqJSON);
-                ESP_ERROR_CHECK(Instance->sendError(request, Errors::NoPermission, "Cannot change password of another user"));
-                return ESP_FAIL;
-            }
-
             free((void *)user->Password);
             user->Password = strdup(cJSON_GetObjectItem(reqJSON, "password")->valuestring);
         }
@@ -711,16 +711,6 @@ namespace server
         // Update emoji if present
         if (cJSON_GetObjectItem(reqJSON, "emoji") != NULL)
         {
-            // Check if it is the requesting user or it is an admin
-            if (!reqUser->Equals(user) && !Instance->user->Belongs(reqUser, &role::System::Admin))
-            {
-                delete reqUser;
-                delete user;
-                cJSON_Delete(reqJSON);
-                ESP_ERROR_CHECK(Instance->sendError(request, Errors::NoPermission, "Cannot change emoji of another user"));
-                return ESP_FAIL;
-            }
-
             free((void *)user->Emoji);
             user->Emoji = strdup(cJSON_GetObjectItem(reqJSON, "emoji")->valuestring);
         }
@@ -1013,6 +1003,16 @@ namespace server
             return ESP_FAIL;
         }
 
+        // Check if triggered device is an actuator
+        if (strcmp(actuator->Type, device::Types::Actuator))
+        {
+            delete actuator;
+            cJSON_Delete(reqJSON);
+            delete reqUser;
+            ESP_ERROR_CHECK(Instance->sendError(request, Errors::InvalidRequest, "Device is not an actuator"));
+            return ESP_FAIL;
+        }
+
         // Check if the requesting user role includes the actuator or it is an admin
         if (!Instance->role->Includes(reqUser->Role, actuator) && !Instance->user->Belongs(reqUser, &role::System::Admin))
         {
@@ -1050,6 +1050,122 @@ namespace server
 
         // Send response JSON
         cJSON *resJSON = newTrigger.JSON();
+        ESP_ERROR_CHECK(Instance->sendJSON(request, resJSON, Statuses::_200));
+        cJSON_Delete(resJSON);
+
+        return ESP_OK;
+    }
+
+    esp_err_t Server::apiPutTriggerHandler(httpd_req_t *request)
+    {
+        // Authenticate request user
+        user::User *reqUser = Instance->checkToken(request);
+        if (reqUser == NULL)
+        {
+            ESP_ERROR_CHECK(Instance->sendError(request, Errors::Unauthorized, NULL));
+            return ESP_FAIL;
+        }
+
+        // Get name path param
+        const char *name = Instance->getPathParam(request);
+
+        // Get trigger
+        trigger::Trigger *trigger = Instance->trigger->Get(name);
+        free((void *)name);
+        if (trigger == NULL)
+        {
+            delete reqUser;
+            ESP_ERROR_CHECK(Instance->sendError(request, Errors::InvalidRequest, "Trigger doesn't exist"));
+            return ESP_FAIL;
+        }
+
+        // Check if the requesting user role includes the triggered actuator or it is an admin
+        if (!Instance->role->Includes(reqUser->Role, trigger->Actuator) && !Instance->user->Belongs(reqUser, &role::System::Admin))
+        {
+            delete trigger;
+            delete reqUser;
+            ESP_ERROR_CHECK(Instance->sendError(request, Errors::NoPermission, "Cannot modify trigger"));
+            return ESP_FAIL;
+        }
+
+        // Bind request JSON
+        cJSON *reqJSON = NULL;
+        ESP_ERROR_CHECK(Instance->recvJSON(request, &reqJSON));
+
+        // Update actuator if present
+        if (cJSON_GetObjectItem(reqJSON, "actuator") != NULL)
+        {
+            // Check if triggered actuator exists
+            device::Device *actuator = Instance->device->GetByName(cJSON_GetObjectItem(reqJSON, "actuator")->valuestring);
+            if (actuator == NULL)
+            {
+                cJSON_Delete(reqJSON);
+                delete trigger;
+                delete reqUser;
+                ESP_ERROR_CHECK(Instance->sendError(request, Errors::InvalidRequest, "Actuator doesn't exist"));
+                return ESP_FAIL;
+            }
+
+            // Check if triggered device is an actuator
+            if (strcmp(actuator->Type, device::Types::Actuator))
+            {
+                delete actuator;
+                cJSON_Delete(reqJSON);
+                delete trigger;
+                delete reqUser;
+                ESP_ERROR_CHECK(Instance->sendError(request, Errors::InvalidRequest, "Device is not an actuator"));
+                return ESP_FAIL;
+            }
+
+            // Check if the requesting user role includes the actuator or it is an admin
+            if (!Instance->role->Includes(reqUser->Role, actuator) && !Instance->user->Belongs(reqUser, &role::System::Admin))
+            {
+                delete actuator;
+                cJSON_Delete(reqJSON);
+                delete trigger;
+                delete reqUser;
+                ESP_ERROR_CHECK(Instance->sendError(request, Errors::NoPermission, "Cannot create trigger"));
+                return ESP_FAIL;
+            }
+
+            free((void *)trigger->Actuator);
+            trigger->Actuator = strdup(actuator->Name);
+            delete actuator;
+        }
+
+        // Update schedule if present
+        if (cJSON_GetObjectItem(reqJSON, "schedule") != NULL)
+        {
+            // Check if schedule is valid
+            if (!Instance->trigger->IsScheduleValid(cJSON_GetObjectItem(reqJSON, "schedule")->valuestring))
+            {
+                cJSON_Delete(reqJSON);
+                delete trigger;
+                delete reqUser;
+                ESP_ERROR_CHECK(Instance->sendError(request, Errors::InvalidRequest, "Schedule is invalid"));
+                return ESP_FAIL;
+            }
+
+            free((void *)trigger->Schedule);
+            trigger->Schedule = strdup(cJSON_GetObjectItem(reqJSON, "schedule")->valuestring);
+        }
+
+        // Update emoji if present
+        if (cJSON_GetObjectItem(reqJSON, "emoji") != NULL)
+        {
+            free((void *)trigger->Emoji);
+            trigger->Emoji = strdup(cJSON_GetObjectItem(reqJSON, "emoji")->valuestring);
+        }
+
+        cJSON_Delete(reqJSON);
+        delete reqUser;
+
+        // Save trigger
+        Instance->trigger->Set(trigger);
+
+        // Send response JSON
+        cJSON *resJSON = trigger->JSON();
+        delete trigger;
         ESP_ERROR_CHECK(Instance->sendJSON(request, resJSON, Statuses::_200));
         cJSON_Delete(resJSON);
 
