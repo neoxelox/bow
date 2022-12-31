@@ -229,8 +229,12 @@ namespace device
                 // Update context depending on sensor subtype
                 if (!strcmp(sensor->Subtype, Subtypes::Bistate))
                 {
-                    free((void *)sensor->Context.Bistate.LastIdentifier);
-                    sensor->Context.Bistate.LastIdentifier = strdup(packet->Data);
+                    if (!strcmp(packet->Data, sensor->Context.Bistate.Identifier1))
+                        sensor->Context.Bistate.State = 1;
+                    else if (!strcmp(packet->Data, sensor->Context.Bistate.Identifier2))
+                        sensor->Context.Bistate.State = 2;
+                    else
+                        sensor->Context.Bistate.State = 0;
                 }
 
                 // Save updated sensor context

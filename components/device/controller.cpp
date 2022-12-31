@@ -39,7 +39,7 @@ namespace device
             this->Context.Bistate.Emoji1 = strdup(context.Bistate.Emoji1);
             this->Context.Bistate.Identifier2 = strdup(context.Bistate.Identifier2);
             this->Context.Bistate.Emoji2 = strdup(context.Bistate.Emoji2);
-            this->Context.Bistate.LastIdentifier = strdup(context.Bistate.LastIdentifier);
+            this->Context.Bistate.State = context.Bistate.State;
         }
         else
             memset(&this->Context, 0, sizeof(union Context));
@@ -68,7 +68,7 @@ namespace device
             this->Context.Bistate.Emoji1 = strdup(cJSON_GetObjectItem(context, "emoji1")->valuestring);
             this->Context.Bistate.Identifier2 = strdup(cJSON_GetObjectItem(context, "identifier2")->valuestring);
             this->Context.Bistate.Emoji2 = strdup(cJSON_GetObjectItem(context, "emoji2")->valuestring);
-            this->Context.Bistate.LastIdentifier = strdup(cJSON_GetObjectItem(context, "last_identifier")->valuestring);
+            this->Context.Bistate.State = cJSON_GetObjectItem(context, "state")->valueint;
         }
         else
             memset(&this->Context, 0, sizeof(union Context));
@@ -83,21 +83,22 @@ namespace device
         free((void *)this->Name);
         free((void *)this->Type);
 
-        if (!strcmp(this->Subtype, Subtypes::Button))
+        if (this->Subtype != NULL)
         {
-            free((void *)this->Context.Button.Command);
-            free((void *)this->Context.Button.Emoji);
+            if (!strcmp(this->Subtype, Subtypes::Button))
+            {
+                free((void *)this->Context.Button.Command);
+                free((void *)this->Context.Button.Emoji);
+            }
+            else if (!strcmp(this->Subtype, Subtypes::Bistate))
+            {
+                free((void *)this->Context.Bistate.Identifier1);
+                free((void *)this->Context.Bistate.Emoji1);
+                free((void *)this->Context.Bistate.Identifier2);
+                free((void *)this->Context.Bistate.Emoji2);
+            }
         }
-        else if (!strcmp(this->Subtype, Subtypes::Bistate))
-        {
-            free((void *)this->Context.Bistate.Identifier1);
-            free((void *)this->Context.Bistate.Emoji1);
-            free((void *)this->Context.Bistate.Identifier2);
-            free((void *)this->Context.Bistate.Emoji2);
-            free((void *)this->Context.Bistate.LastIdentifier);
-        }
-        else
-            memset(&this->Context, 0, sizeof(union Context));
+        memset(&this->Context, 0, sizeof(union Context));
 
         free((void *)this->Subtype);
         free((void *)this->Emoji);
@@ -112,21 +113,22 @@ namespace device
         free((void *)this->Name);
         free((void *)this->Type);
 
-        if (!strcmp(this->Subtype, Subtypes::Button))
+        if (this->Subtype != NULL)
         {
-            free((void *)this->Context.Button.Command);
-            free((void *)this->Context.Button.Emoji);
+            if (!strcmp(this->Subtype, Subtypes::Button))
+            {
+                free((void *)this->Context.Button.Command);
+                free((void *)this->Context.Button.Emoji);
+            }
+            else if (!strcmp(this->Subtype, Subtypes::Bistate))
+            {
+                free((void *)this->Context.Bistate.Identifier1);
+                free((void *)this->Context.Bistate.Emoji1);
+                free((void *)this->Context.Bistate.Identifier2);
+                free((void *)this->Context.Bistate.Emoji2);
+            }
         }
-        else if (!strcmp(this->Subtype, Subtypes::Bistate))
-        {
-            free((void *)this->Context.Bistate.Identifier1);
-            free((void *)this->Context.Bistate.Emoji1);
-            free((void *)this->Context.Bistate.Identifier2);
-            free((void *)this->Context.Bistate.Emoji2);
-            free((void *)this->Context.Bistate.LastIdentifier);
-        }
-        else
-            memset(&this->Context, 0, sizeof(union Context));
+        memset(&this->Context, 0, sizeof(union Context));
 
         free((void *)this->Subtype);
         free((void *)this->Emoji);
@@ -148,7 +150,7 @@ namespace device
             this->Context.Bistate.Emoji1 = strdup(other.Context.Bistate.Emoji1);
             this->Context.Bistate.Identifier2 = strdup(other.Context.Bistate.Identifier2);
             this->Context.Bistate.Emoji2 = strdup(other.Context.Bistate.Emoji2);
-            this->Context.Bistate.LastIdentifier = strdup(other.Context.Bistate.LastIdentifier);
+            this->Context.Bistate.State = other.Context.Bistate.State;
         }
         else
             memset(&this->Context, 0, sizeof(union Context));
@@ -181,7 +183,7 @@ namespace device
             cJSON_AddStringToObject(context, "emoji1", this->Context.Bistate.Emoji1);
             cJSON_AddStringToObject(context, "identifier2", this->Context.Bistate.Identifier2);
             cJSON_AddStringToObject(context, "emoji2", this->Context.Bistate.Emoji2);
-            cJSON_AddStringToObject(context, "last_identifier", this->Context.Bistate.LastIdentifier);
+            cJSON_AddNumberToObject(context, "state", this->Context.Bistate.State);
         }
 
         cJSON_AddStringToObject(root, "emoji", this->Emoji);
@@ -231,8 +233,6 @@ namespace device
 
     Device *Controller::GetSensorByIdentifier(const char *identifier)
     {
-        Device *device = NULL;
-
         typedef struct findArgs
         {
             Device *device;
@@ -240,7 +240,7 @@ namespace device
         } findArgs;
 
         findArgs args = {
-            .device = device,
+            .device = NULL,
             .identifier = identifier,
         };
 
@@ -252,7 +252,7 @@ namespace device
 
                 if (!strcmp(cJSON_GetObjectItem(deviceJSON, "type")->valuestring, Types::Sensor))
                 {
-                    findArgs *args = *(findArgs **)funcArgs;
+                    findArgs *args = (findArgs *)funcArgs;
                     cJSON *context = cJSON_GetObjectItem(deviceJSON, "context");
 
                     if (!strcmp(cJSON_GetObjectItem(deviceJSON, "subtype")->valuestring, Subtypes::Bistate))
@@ -272,7 +272,7 @@ namespace device
             },
             &args));
 
-        return device;
+        return args.device;
     }
 
     Device *Controller::List(uint32_t *size)

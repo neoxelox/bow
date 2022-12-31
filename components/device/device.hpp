@@ -104,7 +104,7 @@ namespace device
             const char *Emoji1;
             const char *Identifier2;
             const char *Emoji2;
-            const char *LastIdentifier;
+            uint8_t State;
         } Bistate;
     }
 

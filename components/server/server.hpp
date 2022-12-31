@@ -110,6 +110,15 @@ namespace server
         httpd_uri_t apiPutUserURIHandler = {"/api/users/*", Methods::PUT, apiPutUserHandler};
         httpd_uri_t apiDeleteUserURIHandler = {"/api/users/*", Methods::DELETE, apiDeleteUserHandler};
 
+        httpd_uri_t apiGetDevicesURIHandler = {"/api/devices", Methods::GET, apiGetDevicesHandler};
+        httpd_uri_t apiGetDeviceURIHandler = {"/api/devices/*", Methods::GET, apiGetDeviceHandler};
+
+        httpd_uri_t apiGetTriggersURIHandler = {"/api/triggers", Methods::GET, apiGetTriggersHandler};
+        httpd_uri_t apiGetTriggerURIHandler = {"/api/triggers/*", Methods::GET, apiGetTriggerHandler};
+
+        httpd_uri_t apiGetRolesURIHandler = {"/api/roles", Methods::GET, apiGetRolesHandler};
+        httpd_uri_t apiGetRoleURIHandler = {"/api/roles/*", Methods::GET, apiGetRoleHandler};
+
         httpd_uri_t apiGetSystemInfoURIHandler = {"/api/system/info", Methods::GET, apiGetSystemInfoHandler};
         httpd_uri_t apiGetSystemTimeURIHandler = {"/api/system/time", Methods::GET, apiGetSystemTimeHandler};
         httpd_uri_t apiGetSystemWiFiURIHandler = {"/api/system/wifi", Methods::GET, apiGetSystemWifiHandler};
@@ -144,6 +153,15 @@ namespace server
         static esp_err_t apiGetSystemWifiHandler(httpd_req_t *request);
         static esp_err_t apiPutSystemWifiHandler(httpd_req_t *request);
         static esp_err_t apiDeleteSystemResetHandler(httpd_req_t *request);
+
+        static esp_err_t apiGetDevicesHandler(httpd_req_t *request);
+        static esp_err_t apiGetDeviceHandler(httpd_req_t *request);
+
+        static esp_err_t apiGetTriggersHandler(httpd_req_t *request);
+        static esp_err_t apiGetTriggerHandler(httpd_req_t *request);
+
+        static esp_err_t apiGetRolesHandler(httpd_req_t *request);
+        static esp_err_t apiGetRoleHandler(httpd_req_t *request);
 
     public:
         inline static Server *Instance;

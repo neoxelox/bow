@@ -130,6 +130,15 @@ namespace server
         ESP_ERROR_CHECK(httpd_register_uri_handler(this->espServer, &this->apiPutUserURIHandler));
         ESP_ERROR_CHECK(httpd_register_uri_handler(this->espServer, &this->apiDeleteUserURIHandler));
 
+        ESP_ERROR_CHECK(httpd_register_uri_handler(this->espServer, &this->apiGetDevicesURIHandler));
+        ESP_ERROR_CHECK(httpd_register_uri_handler(this->espServer, &this->apiGetDeviceURIHandler));
+
+        ESP_ERROR_CHECK(httpd_register_uri_handler(this->espServer, &this->apiGetTriggersURIHandler));
+        ESP_ERROR_CHECK(httpd_register_uri_handler(this->espServer, &this->apiGetTriggerURIHandler));
+
+        ESP_ERROR_CHECK(httpd_register_uri_handler(this->espServer, &this->apiGetRolesURIHandler));
+        ESP_ERROR_CHECK(httpd_register_uri_handler(this->espServer, &this->apiGetRoleURIHandler));
+
         ESP_ERROR_CHECK(httpd_register_uri_handler(this->espServer, &this->apiGetSystemInfoURIHandler));
         ESP_ERROR_CHECK(httpd_register_uri_handler(this->espServer, &this->apiGetSystemTimeURIHandler));
         ESP_ERROR_CHECK(httpd_register_uri_handler(this->espServer, &this->apiGetSystemWiFiURIHandler));
@@ -812,6 +821,198 @@ namespace server
         delete user;
         cJSON_DeleteItemFromObject(resJSON, "password");
         cJSON_DeleteItemFromObject(resJSON, "token");
+        ESP_ERROR_CHECK(Instance->sendJSON(request, resJSON, Statuses::_200));
+        cJSON_Delete(resJSON);
+
+        return ESP_OK;
+    }
+
+    esp_err_t Server::apiGetDevicesHandler(httpd_req_t *request)
+    {
+        // Authenticate request user
+        user::User *reqUser = Instance->checkToken(request);
+        if (reqUser == NULL)
+        {
+            ESP_ERROR_CHECK(Instance->sendError(request, Errors::Unauthorized, NULL));
+            return ESP_FAIL;
+        }
+
+        delete reqUser;
+
+        // Get all devices
+        uint32_t size;
+        device::Device *devices = Instance->device->List(&size);
+
+        // Send response JSON
+        cJSON *resJSON = cJSON_CreateObject();
+        cJSON *devicesJSON = cJSON_AddArrayToObject(resJSON, "devices");
+
+        for (int i = 0; i < size; i++)
+            cJSON_AddItemToArray(devicesJSON, devices[i].JSON());
+
+        delete[] devices;
+
+        ESP_ERROR_CHECK(Instance->sendJSON(request, resJSON, Statuses::_200));
+        cJSON_Delete(resJSON);
+
+        return ESP_OK;
+    }
+
+    esp_err_t Server::apiGetDeviceHandler(httpd_req_t *request)
+    {
+        // Authenticate request user
+        user::User *reqUser = Instance->checkToken(request);
+        if (reqUser == NULL)
+        {
+            ESP_ERROR_CHECK(Instance->sendError(request, Errors::Unauthorized, NULL));
+            return ESP_FAIL;
+        }
+
+        delete reqUser;
+
+        // Get name path param
+        const char *name = Instance->getPathParam(request);
+
+        // Get device
+        device::Device *device = Instance->device->GetByName(name);
+        free((void *)name);
+        if (device == NULL)
+        {
+            ESP_ERROR_CHECK(Instance->sendError(request, Errors::InvalidRequest, "Device doesn't exist"));
+            return ESP_FAIL;
+        }
+
+        // Send response JSON
+        cJSON *resJSON = device->JSON();
+        delete device;
+        ESP_ERROR_CHECK(Instance->sendJSON(request, resJSON, Statuses::_200));
+        cJSON_Delete(resJSON);
+
+        return ESP_OK;
+    }
+
+    esp_err_t Server::apiGetTriggersHandler(httpd_req_t *request)
+    {
+        // Authenticate request user
+        user::User *reqUser = Instance->checkToken(request);
+        if (reqUser == NULL)
+        {
+            ESP_ERROR_CHECK(Instance->sendError(request, Errors::Unauthorized, NULL));
+            return ESP_FAIL;
+        }
+
+        delete reqUser;
+
+        // Get all triggers
+        uint32_t size;
+        trigger::Trigger *triggers = Instance->trigger->List(&size);
+
+        // Send response JSON
+        cJSON *resJSON = cJSON_CreateObject();
+        cJSON *triggersJSON = cJSON_AddArrayToObject(resJSON, "triggers");
+
+        for (int i = 0; i < size; i++)
+            cJSON_AddItemToArray(triggersJSON, triggers[i].JSON());
+
+        delete[] triggers;
+
+        ESP_ERROR_CHECK(Instance->sendJSON(request, resJSON, Statuses::_200));
+        cJSON_Delete(resJSON);
+
+        return ESP_OK;
+    }
+
+    esp_err_t Server::apiGetTriggerHandler(httpd_req_t *request)
+    {
+        // Authenticate request user
+        user::User *reqUser = Instance->checkToken(request);
+        if (reqUser == NULL)
+        {
+            ESP_ERROR_CHECK(Instance->sendError(request, Errors::Unauthorized, NULL));
+            return ESP_FAIL;
+        }
+
+        delete reqUser;
+
+        // Get name path param
+        const char *name = Instance->getPathParam(request);
+
+        // Get trigger
+        trigger::Trigger *trigger = Instance->trigger->Get(name);
+        free((void *)name);
+        if (trigger == NULL)
+        {
+            ESP_ERROR_CHECK(Instance->sendError(request, Errors::InvalidRequest, "Trigger doesn't exist"));
+            return ESP_FAIL;
+        }
+
+        // Send response JSON
+        cJSON *resJSON = trigger->JSON();
+        delete trigger;
+        ESP_ERROR_CHECK(Instance->sendJSON(request, resJSON, Statuses::_200));
+        cJSON_Delete(resJSON);
+
+        return ESP_OK;
+    }
+
+    esp_err_t Server::apiGetRolesHandler(httpd_req_t *request)
+    {
+        // Authenticate request user
+        user::User *reqUser = Instance->checkToken(request);
+        if (reqUser == NULL)
+        {
+            ESP_ERROR_CHECK(Instance->sendError(request, Errors::Unauthorized, NULL));
+            return ESP_FAIL;
+        }
+
+        delete reqUser;
+
+        // Get all roles
+        uint32_t size;
+        role::Role *roles = Instance->role->List(&size);
+
+        // Send response JSON
+        cJSON *resJSON = cJSON_CreateObject();
+        cJSON *rolesJSON = cJSON_AddArrayToObject(resJSON, "roles");
+
+        for (int i = 0; i < size; i++)
+            cJSON_AddItemToArray(rolesJSON, roles[i].JSON());
+
+        delete[] roles;
+
+        ESP_ERROR_CHECK(Instance->sendJSON(request, resJSON, Statuses::_200));
+        cJSON_Delete(resJSON);
+
+        return ESP_OK;
+    }
+
+    esp_err_t Server::apiGetRoleHandler(httpd_req_t *request)
+    {
+        // Authenticate request user
+        user::User *reqUser = Instance->checkToken(request);
+        if (reqUser == NULL)
+        {
+            ESP_ERROR_CHECK(Instance->sendError(request, Errors::Unauthorized, NULL));
+            return ESP_FAIL;
+        }
+
+        delete reqUser;
+
+        // Get name path param
+        const char *name = Instance->getPathParam(request);
+
+        // Get role
+        role::Role *role = Instance->role->Get(name);
+        free((void *)name);
+        if (role == NULL)
+        {
+            ESP_ERROR_CHECK(Instance->sendError(request, Errors::InvalidRequest, "Role doesn't exist"));
+            return ESP_FAIL;
+        }
+
+        // Send response JSON
+        cJSON *resJSON = role->JSON();
+        delete role;
         ESP_ERROR_CHECK(Instance->sendJSON(request, resJSON, Statuses::_200));
         cJSON_Delete(resJSON);
 

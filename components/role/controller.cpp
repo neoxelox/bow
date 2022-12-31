@@ -10,7 +10,7 @@ namespace role
     Role::Role()
     {
         this->Name = NULL;
-        this->Devices = NULL;
+        this->Devices = (const char **)calloc(1, sizeof(char *));
         this->Emoji = NULL;
         this->Creator = NULL;
         this->CreatedAt = 0;

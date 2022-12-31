@@ -161,7 +161,7 @@ namespace trigger
                     // Send command to actuator
                     Instance->transmitter->Send(&command);
 
-                    Instance->logger->Debug(TAG, "Actuator %s triggered", actuator->Name);
+                    Instance->logger->Debug(TAG, "Actuator %s triggered by %s", actuator->Name, triggers[i].Name);
 
                     delete actuator;
                 }
