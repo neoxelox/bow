@@ -432,6 +432,11 @@ namespace provisioner
         return mode;
     }
 
+    void Provisioner::GetCurrent(wifi_ap_record_t *current)
+    {
+        ESP_ERROR_CHECK(esp_wifi_sta_get_ap_info(current));
+    }
+
     Credentials *Provisioner::GetCreds()
     {
         // TODO: Decrypt password

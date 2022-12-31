@@ -112,6 +112,7 @@ namespace server
 
         httpd_uri_t apiGetSystemInfoURIHandler = {"/api/system/info", Methods::GET, apiGetSystemInfoHandler};
         httpd_uri_t apiGetSystemTimeURIHandler = {"/api/system/time", Methods::GET, apiGetSystemTimeHandler};
+        httpd_uri_t apiGetSystemWiFiURIHandler = {"/api/system/wifi", Methods::GET, apiGetSystemWifiHandler};
 
     private:
         void start();
@@ -138,6 +139,7 @@ namespace server
 
         static esp_err_t apiGetSystemInfoHandler(httpd_req_t *request);
         static esp_err_t apiGetSystemTimeHandler(httpd_req_t *request);
+        static esp_err_t apiGetSystemWifiHandler(httpd_req_t *request);
 
     public:
         inline static Server *Instance;

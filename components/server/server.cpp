@@ -132,6 +132,7 @@ namespace server
 
         ESP_ERROR_CHECK(httpd_register_uri_handler(this->espServer, &this->apiGetSystemInfoURIHandler));
         ESP_ERROR_CHECK(httpd_register_uri_handler(this->espServer, &this->apiGetSystemTimeURIHandler));
+        ESP_ERROR_CHECK(httpd_register_uri_handler(this->espServer, &this->apiGetSystemWiFiURIHandler));
 
         // Register frontend handler, note that it has to be the last one to catch all other URLs
         ESP_ERROR_CHECK(httpd_register_uri_handler(this->espServer, &this->frontURIHandler));
@@ -832,16 +833,16 @@ namespace server
         // Get chip info
         esp_chip_info_t chipInfo;
         esp_chip_info(&chipInfo);
-        uint8_t macSTA;
-        uint8_t macAP;
-        ESP_ERROR_CHECK(esp_read_mac(&macSTA, ESP_MAC_WIFI_STA));
-        ESP_ERROR_CHECK(esp_read_mac(&macAP, ESP_MAC_WIFI_SOFTAP));
+        uint8_t mac;
+        ESP_ERROR_CHECK(esp_read_mac(&mac, ESP_MAC_WIFI_SOFTAP));
 
         // TODO: Put all chip info like: https://github.com/espressif/esp-idf/blob/master/examples/get-started/hello_world/main/hello_world_main.c
         cJSON *chipJSON = cJSON_AddObjectToObject(resJSON, "chip");
-
-        // TODO: Put both MACs using sprintf, MACSTR and MAC2STR
-        cJSON *macJSON = cJSON_AddObjectToObject(chipJSON, "mac");
+        cJSON *wifiJSON = cJSON_AddObjectToObject(chipJSON, "wifi");
+        cJSON_AddStringToObject(wifiJSON, "name", provisioner::AP_SSID);
+        cJSON_AddStringToObject(wifiJSON, "password", provisioner::AP_PASSWORD);
+        // TODO: Put MAC using sprintf, MACSTR and MAC2STR
+        cJSON_AddStringToObject(wifiJSON, "mac", "");
 
         // Get firmware info
         const esp_app_desc_t *appDesc = esp_app_get_description();
@@ -913,6 +914,55 @@ namespace server
         cJSON *resJSON = cJSON_CreateObject();
         cJSON_AddNumberToObject(resJSON, "time", now);
         cJSON_AddStringToObject(resJSON, "zone", chron::TIME_ZONE);
+        ESP_ERROR_CHECK(Instance->sendJSON(request, resJSON, Statuses::_200));
+        cJSON_Delete(resJSON);
+
+        return ESP_OK;
+    }
+
+    esp_err_t Server::apiGetSystemWifiHandler(httpd_req_t *request)
+    {
+        // Authenticate request user
+        user::User *reqUser = Instance->checkToken(request);
+        if (reqUser == NULL)
+        {
+            ESP_ERROR_CHECK(Instance->sendError(request, Errors::Unauthorized, NULL));
+            return ESP_FAIL;
+        }
+
+        delete reqUser;
+
+        cJSON *resJSON = cJSON_CreateObject();
+
+        // Get current Wi-Fi network
+        provisioner::Credentials *creds = Instance->provisioner->GetCreds();
+
+        if (creds != NULL && Instance->provisioner->GetMode() == WIFI_MODE_STA)
+        {
+            wifi_ap_record_t info;
+            Instance->provisioner->GetCurrent(&info);
+
+            cJSON *currentJSON = cJSON_AddObjectToObject(resJSON, "current");
+            cJSON_AddStringToObject(currentJSON, "name", (char *)info.ssid);
+            cJSON_AddNumberToObject(currentJSON, "strength", info.rssi);
+            // TODO: Add security info
+            cJSON_AddStringToObject(currentJSON, "security", "");
+            // TODO: Add IP info
+            cJSON_AddStringToObject(currentJSON, "address", "");
+            cJSON_AddStringToObject(currentJSON, "netmask", "");
+            cJSON_AddStringToObject(currentJSON, "gateway", "");
+            // TODO: Add MAC info using sprintf, MACSTR and MAC2STR
+            cJSON_AddStringToObject(currentJSON, "mac", "");
+        }
+        else
+            cJSON_AddNullToObject(resJSON, "current");
+
+        delete creds;
+
+        // TODO: Get available Wi-Fi networks
+        cJSON *availableJSON = cJSON_AddArrayToObject(resJSON, "available");
+
+        // Send response JSON
         ESP_ERROR_CHECK(Instance->sendJSON(request, resJSON, Statuses::_200));
         cJSON_Delete(resJSON);
 
