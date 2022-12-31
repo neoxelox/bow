@@ -140,6 +140,42 @@ namespace user
         return user;
     }
 
+    bool Controller::ExistsWithRole(const char *role)
+    {
+        typedef struct findArgs
+        {
+            bool exists;
+            const char *role;
+        } findArgs;
+
+        findArgs args = {
+            .exists = false,
+            .role = role,
+        };
+
+        ESP_ERROR_CHECK(this->db->Find(
+            [](const char *key, void *funcArgs) -> bool
+            {
+                findArgs *args = (findArgs *)funcArgs;
+
+                cJSON *userJSON = NULL;
+                ESP_ERROR_CHECK(Instance->db->Get(key, &userJSON));
+
+                if (!strcmp(cJSON_GetObjectItem(userJSON, "role")->valuestring, args->role))
+                {
+                    args->exists = true;
+                    cJSON_Delete(userJSON);
+                    return true;
+                }
+
+                cJSON_Delete(userJSON);
+                return false;
+            },
+            &args));
+
+        return args.exists;
+    }
+
     User *Controller::List(uint32_t *size)
     {
         uint32_t count = this->Count();

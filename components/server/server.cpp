@@ -549,7 +549,7 @@ namespace server
         if (user::System::System.Equals(cJSON_GetObjectItem(reqJSON, "name")->valuestring))
         {
             cJSON_Delete(reqJSON);
-            ESP_ERROR_CHECK(Instance->sendError(request, Errors::NoPermission, "Cannot log as System user"));
+            ESP_ERROR_CHECK(Instance->sendError(request, Errors::NoPermission, "Cannot log as system users"));
             return ESP_FAIL;
         }
 
@@ -681,7 +681,7 @@ namespace server
         {
             delete reqUser;
             free((void *)name);
-            ESP_ERROR_CHECK(Instance->sendError(request, Errors::NoPermission, "Cannot modify System user"));
+            ESP_ERROR_CHECK(Instance->sendError(request, Errors::NoPermission, "Cannot modify system users"));
             return ESP_FAIL;
         }
 
@@ -786,7 +786,7 @@ namespace server
         {
             delete reqUser;
             free((void *)name);
-            ESP_ERROR_CHECK(Instance->sendError(request, Errors::NoPermission, "Cannot delete System user"));
+            ESP_ERROR_CHECK(Instance->sendError(request, Errors::NoPermission, "Cannot delete system users"));
             return ESP_FAIL;
         }
 
@@ -1388,6 +1388,62 @@ namespace server
 
     esp_err_t Server::apiDeleteRoleHandler(httpd_req_t *request)
     {
+        // Authenticate request user
+        user::User *reqUser = Instance->checkToken(request);
+        if (reqUser == NULL)
+        {
+            ESP_ERROR_CHECK(Instance->sendError(request, Errors::Unauthorized, NULL));
+            return ESP_FAIL;
+        }
+
+        // Get name path param
+        const char *name = Instance->getPathParam(request);
+
+        // Ensure not deleting the default system roles
+        if (role::System::Admin.Equals(name) || role::System::Guest.Equals(name))
+        {
+            free((void *)name);
+            delete reqUser;
+            ESP_ERROR_CHECK(Instance->sendError(request, Errors::NoPermission, "Cannot delete system roles"));
+            return ESP_FAIL;
+        }
+
+        // Check if the requesting user is an admin
+        if (!Instance->user->Belongs(reqUser, &role::System::Admin))
+        {
+            free((void *)name);
+            delete reqUser;
+            ESP_ERROR_CHECK(Instance->sendError(request, Errors::NoPermission, "Cannot delete role"));
+            return ESP_FAIL;
+        }
+
+        delete reqUser;
+
+        // Get role
+        role::Role *role = Instance->role->Get(name);
+        free((void *)name);
+        if (role == NULL)
+        {
+            ESP_ERROR_CHECK(Instance->sendError(request, Errors::InvalidRequest, "Role doesn't exist"));
+            return ESP_FAIL;
+        }
+
+        // Check if role is being used
+        if (Instance->user->ExistsWithRole(role->Name))
+        {
+            ESP_ERROR_CHECK(Instance->sendError(request, Errors::NoPermission, "Cannot delete used role"));
+            return ESP_FAIL;
+        }
+
+        // Delete role
+        Instance->role->Delete(role->Name);
+
+        // Send response JSON
+        cJSON *resJSON = role->JSON();
+        delete role;
+        ESP_ERROR_CHECK(Instance->sendJSON(request, resJSON, Statuses::_200));
+        cJSON_Delete(resJSON);
+
         return ESP_OK;
     }
 

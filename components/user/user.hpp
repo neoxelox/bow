@@ -54,6 +54,7 @@ namespace user
     public:
         uint32_t Count();
         User *Get(const char *name);
+        bool ExistsWithRole(const char *role);
         User *List(uint32_t *size);
         void Set(User *user);
         void Delete(const char *name);
