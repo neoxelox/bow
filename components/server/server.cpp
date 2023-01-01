@@ -1383,6 +1383,101 @@ namespace server
 
     esp_err_t Server::apiPutRoleHandler(httpd_req_t *request)
     {
+        // Authenticate request user
+        user::User *reqUser = Instance->checkToken(request);
+        if (reqUser == NULL)
+        {
+            ESP_ERROR_CHECK(Instance->sendError(request, Errors::Unauthorized, NULL));
+            return ESP_FAIL;
+        }
+
+        // Get name path param
+        const char *name = Instance->getPathParam(request);
+
+        // Ensure not modifying the default system roles
+        if (role::System::Admin.Equals(name) || role::System::Guest.Equals(name))
+        {
+            free((void *)name);
+            delete reqUser;
+            ESP_ERROR_CHECK(Instance->sendError(request, Errors::NoPermission, "Cannot modify system roles"));
+            return ESP_FAIL;
+        }
+
+        // Check if the requesting user is an admin
+        if (!Instance->user->Belongs(reqUser, &role::System::Admin))
+        {
+            free((void *)name);
+            delete reqUser;
+            ESP_ERROR_CHECK(Instance->sendError(request, Errors::NoPermission, "Cannot modify role"));
+            return ESP_FAIL;
+        }
+
+        delete reqUser;
+
+        // Get role
+        role::Role *role = Instance->role->Get(name);
+        free((void *)name);
+        if (role == NULL)
+        {
+            ESP_ERROR_CHECK(Instance->sendError(request, Errors::InvalidRequest, "Role doesn't exist"));
+            return ESP_FAIL;
+        }
+
+        // Bind request JSON
+        cJSON *reqJSON = NULL;
+        ESP_ERROR_CHECK(Instance->recvJSON(request, &reqJSON));
+
+        const char **devices = NULL;
+        // Update devices if present
+        if (cJSON_GetObjectItem(reqJSON, "devices") != NULL)
+        {
+            // Check if included devices exist
+            cJSON *reqDevices = cJSON_GetObjectItem(reqJSON, "devices");
+            int size = cJSON_GetArraySize(reqDevices);
+            devices = (const char **)malloc((size + 1) * sizeof(char *));
+
+            for (int i = 0; i < size; i++)
+            {
+                device::Device *device = Instance->device->GetByName(cJSON_GetArrayItem(reqDevices, i)->valuestring);
+                if (device == NULL)
+                {
+                    free((void *)devices);
+                    cJSON_Delete(reqJSON);
+                    ESP_ERROR_CHECK(Instance->sendError(request, Errors::InvalidRequest, "Device doesn't exist"));
+                    return ESP_FAIL;
+                }
+
+                devices[i] = strdup(device->Name);
+                delete device;
+            }
+            devices[size] = NULL;
+
+            for (int i = 0; role->Devices[i] != NULL; i++)
+                free((void *)role->Devices[i]);
+            free((void *)role->Devices);
+
+            // Passing freeing ownership
+            role->Devices = devices;
+        }
+
+        // Update emoji if present
+        if (cJSON_GetObjectItem(reqJSON, "emoji") != NULL)
+        {
+            free((void *)role->Emoji);
+            role->Emoji = strdup(cJSON_GetObjectItem(reqJSON, "emoji")->valuestring);
+        }
+
+        cJSON_Delete(reqJSON);
+
+        // Save role
+        Instance->role->Set(role);
+
+        // Send response JSON
+        cJSON *resJSON = role->JSON();
+        delete role;
+        ESP_ERROR_CHECK(Instance->sendJSON(request, resJSON, Statuses::_200));
+        cJSON_Delete(resJSON);
+
         return ESP_OK;
     }
 
