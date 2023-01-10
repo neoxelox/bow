@@ -948,7 +948,7 @@ namespace server
             context.Bistate.Emoji1 = cJSON_GetObjectItem(reqContext, "emoji1")->valuestring;
             context.Bistate.Identifier2 = cJSON_GetObjectItem(reqContext, "identifier2")->valuestring;
             context.Bistate.Emoji2 = cJSON_GetObjectItem(reqContext, "emoji2")->valuestring;
-            context.Bistate.State = cJSON_GetObjectItem(reqContext, "state")->valueint;
+            context.Bistate.State = 0;
         }
         else
         {
@@ -984,6 +984,91 @@ namespace server
 
     esp_err_t Server::apiPutDeviceHandler(httpd_req_t *request)
     {
+        // Authenticate request user
+        user::User *reqUser = Instance->checkToken(request);
+        if (reqUser == NULL)
+        {
+            ESP_ERROR_CHECK(Instance->sendError(request, Errors::Unauthorized, NULL));
+            return ESP_FAIL;
+        }
+
+        // Get name path param
+        const char *name = Instance->getPathParam(request);
+
+        // Get device
+        device::Device *device = Instance->device->GetByName(name);
+        free((void *)name);
+        if (device == NULL)
+        {
+            delete reqUser;
+            ESP_ERROR_CHECK(Instance->sendError(request, Errors::InvalidRequest, "Device doesn't exist"));
+            return ESP_FAIL;
+        }
+
+        // Check if the requesting user role includes the device or it is an admin
+        if (!Instance->role->Includes(reqUser->Role, device) && !Instance->user->Belongs(reqUser, &role::System::Admin))
+        {
+            delete device;
+            delete reqUser;
+            ESP_ERROR_CHECK(Instance->sendError(request, Errors::NoPermission, "Cannot modify device"));
+            return ESP_FAIL;
+        }
+
+        delete reqUser;
+
+        // Bind request JSON
+        cJSON *reqJSON = NULL;
+        ESP_ERROR_CHECK(Instance->recvJSON(request, &reqJSON));
+
+        // Update protocol if present
+        if (cJSON_GetObjectItem(reqJSON, "protocol") != NULL)
+        {
+            device->Protocol = cJSON_GetObjectItem(reqJSON, "protocol")->valueint;
+        }
+
+        // Update context if present
+        if (cJSON_GetObjectItem(reqJSON, "context") != NULL)
+        {
+            cJSON *reqContext = cJSON_GetObjectItem(reqJSON, "context");
+
+            if (!strcmp(device->Subtype, device::Subtypes::Button))
+            {
+                free((void *)device->Context.Button.Command);
+                free((void *)device->Context.Button.Emoji);
+                device->Context.Button.Command = strdup(cJSON_GetObjectItem(reqContext, "command")->valuestring);
+                device->Context.Button.Emoji = strdup(cJSON_GetObjectItem(reqContext, "emoji")->valuestring);
+            }
+            else if (!strcmp(device->Subtype, device::Subtypes::Bistate))
+            {
+                free((void *)device->Context.Bistate.Identifier1);
+                free((void *)device->Context.Bistate.Emoji1);
+                free((void *)device->Context.Bistate.Identifier2);
+                free((void *)device->Context.Bistate.Emoji2);
+                device->Context.Bistate.Identifier1 = strdup(cJSON_GetObjectItem(reqContext, "identifier1")->valuestring);
+                device->Context.Bistate.Emoji1 = strdup(cJSON_GetObjectItem(reqContext, "emoji1")->valuestring);
+                device->Context.Bistate.Identifier2 = strdup(cJSON_GetObjectItem(reqContext, "identifier2")->valuestring);
+                device->Context.Bistate.Emoji2 = strdup(cJSON_GetObjectItem(reqContext, "emoji2")->valuestring);
+            }
+        }
+
+        // Update emoji if present
+        if (cJSON_GetObjectItem(reqJSON, "emoji") != NULL)
+        {
+            free((void *)device->Emoji);
+            device->Emoji = strdup(cJSON_GetObjectItem(reqJSON, "emoji")->valuestring);
+        }
+
+        cJSON_Delete(reqJSON);
+
+        // Save device
+        Instance->device->Set(device);
+
+        // Send response JSON
+        cJSON *resJSON = device->JSON();
+        delete device;
+        ESP_ERROR_CHECK(Instance->sendJSON(request, resJSON, Statuses::_200));
+        cJSON_Delete(resJSON);
+
         return ESP_OK;
     }
 
