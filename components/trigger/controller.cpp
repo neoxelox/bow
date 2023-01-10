@@ -253,9 +253,23 @@ namespace trigger
         cJSON_Delete(triggerJSON);
     }
 
-    void Controller::Delete(const char *name)
+    void Controller::DeleteByName(const char *name)
     {
         ESP_ERROR_CHECK(this->db->Delete(name));
+    }
+
+    void Controller::DeleteByActuator(const char *actuator)
+    {
+        // Get all triggers, notice that deleting an NVS entry while iterating is not possible
+        uint32_t size;
+        Trigger *triggers = this->List(&size);
+
+        // Delete triggers by actuator
+        for (int i = 0; i < size; i++)
+            if (!strcmp(triggers[i].Actuator, actuator))
+                ESP_ERROR_CHECK(this->db->Delete(triggers[i].Name));
+
+        delete[] triggers;
     }
 
     void Controller::Drop()

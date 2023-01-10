@@ -62,7 +62,8 @@ namespace trigger
         Trigger *Get(const char *name);
         Trigger *List(uint32_t *size);
         void Set(Trigger *trigger);
-        void Delete(const char *name);
+        void DeleteByName(const char *name);
+        void DeleteByActuator(const char *actuator);
         void Drop();
         bool IsScheduleValid(const char *schedule);
     };

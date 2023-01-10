@@ -1074,6 +1074,54 @@ namespace server
 
     esp_err_t Server::apiDeleteDeviceHandler(httpd_req_t *request)
     {
+        // Authenticate request user
+        user::User *reqUser = Instance->checkToken(request);
+        if (reqUser == NULL)
+        {
+            ESP_ERROR_CHECK(Instance->sendError(request, Errors::Unauthorized, NULL));
+            return ESP_FAIL;
+        }
+
+        // Get name path param
+        const char *name = Instance->getPathParam(request);
+
+        // Get device
+        device::Device *device = Instance->device->GetByName(name);
+        free((void *)name);
+        if (device == NULL)
+        {
+            delete reqUser;
+            ESP_ERROR_CHECK(Instance->sendError(request, Errors::InvalidRequest, "Device doesn't exist"));
+            return ESP_FAIL;
+        }
+
+        // Check if the requesting user role includes the device or it is an admin
+        if (!Instance->role->Includes(reqUser->Role, device) && !Instance->user->Belongs(reqUser, &role::System::Admin))
+        {
+            delete device;
+            delete reqUser;
+            ESP_ERROR_CHECK(Instance->sendError(request, Errors::NoPermission, "Cannot delete device"));
+            return ESP_FAIL;
+        }
+
+        delete reqUser;
+
+        // If device is an actuator delete all device's triggers
+        if (!strcmp(device->Type, device::Types::Actuator))
+            Instance->trigger->DeleteByActuator(device->Name);
+
+        // Remove device from all roles
+        Instance->role->RemoveDeviceFromAllRoles(device->Name);
+
+        // Delete device
+        Instance->device->Delete(device->Name);
+
+        // Send response JSON
+        cJSON *resJSON = device->JSON();
+        delete device;
+        ESP_ERROR_CHECK(Instance->sendJSON(request, resJSON, Statuses::_200));
+        cJSON_Delete(resJSON);
+
         return ESP_OK;
     }
 
@@ -1396,7 +1444,7 @@ namespace server
         delete reqUser;
 
         // Delete trigger
-        Instance->trigger->Delete(trigger->Name);
+        Instance->trigger->DeleteByName(trigger->Name);
 
         // Send response JSON
         cJSON *resJSON = trigger->JSON();

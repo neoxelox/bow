@@ -55,6 +55,7 @@ namespace role
         Role *List(uint32_t *size);
         void Set(Role *role);
         void Delete(const char *name);
+        void RemoveDeviceFromAllRoles(const char *device);
         void Drop();
         bool Includes(const char *role, const char *device);
         bool Includes(Role *role, const char *device);

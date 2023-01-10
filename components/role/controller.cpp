@@ -212,6 +212,52 @@ namespace role
         ESP_ERROR_CHECK(this->db->Delete(name));
     }
 
+    void Controller::RemoveDeviceFromAllRoles(const char *device)
+    {
+        // Get all roles, notice that updating an NVS entry while iterating is not possible
+        uint32_t size;
+        Role *roles = this->List(&size);
+
+        // Remove device from role if included
+        for (int i = 0; i < size; i++)
+        {
+            if (this->Includes(&roles[i], device))
+            {
+                int devicesSize = 0;
+                while (roles[i].Devices[devicesSize] != NULL)
+                    devicesSize++;
+
+                int newDevicesSize = devicesSize - 1;
+
+                const char **devices = (const char **)malloc((newDevicesSize + 1) * sizeof(char *));
+
+                devicesSize = 0;
+                newDevicesSize = 0;
+                while (roles[i].Devices[devicesSize] != NULL)
+                {
+                    if (strcmp(roles[i].Devices[devicesSize], device))
+                    {
+                        devices[newDevicesSize] = strdup(roles[i].Devices[devicesSize]);
+                        newDevicesSize++;
+                    }
+                    devicesSize++;
+                }
+                devices[newDevicesSize] = NULL;
+
+                for (int j = 0; roles[i].Devices[j] != NULL; j++)
+                    free((void *)roles[i].Devices[j]);
+                free((void *)roles[i].Devices);
+
+                // Passing freeing ownership
+                roles[i].Devices = devices;
+
+                this->Set(&roles[i]);
+            }
+        }
+
+        delete[] roles;
+    }
+
     void Controller::Drop()
     {
         ESP_ERROR_CHECK(this->db->Drop());
