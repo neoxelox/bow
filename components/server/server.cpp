@@ -463,10 +463,9 @@ namespace server
         }
 
         char *location = NULL;
-        provisioner::Credentials *creds = Instance->provisioner->GetCreds();
 
-        // If there are no stored Wi-Fi credentials redirect to onboarding page /#/onboarding
-        if (creds == NULL)
+        // If there are no users (ignoring the System default) redirect to onboarding page /#/onboarding
+        if (Instance->user->Count() <= 1)
             ESP_ERROR_CHECK(httpd_resp_set_hdr(request, Headers::Location, "/#/onboarding"));
         // Otherwise redirect to the frontend hash-based navigation: /#/:URI
         else
@@ -476,15 +475,13 @@ namespace server
             ESP_ERROR_CHECK(httpd_resp_set_hdr(request, Headers::Location, strcat(location, request->uri)));
         }
 
-        delete creds;
-
         // If provisioner mode is AP use temporary redirects with content instead
         if (Instance->provisioner->GetMode() == WIFI_MODE_AP)
         {
             ESP_ERROR_CHECK(httpd_resp_set_status(request, Statuses::_302));
             // iOS requires content in the response to detect a captive portal
             ESP_ERROR_CHECK(httpd_resp_set_type(request, ContentTypes::TextHTML));
-            ESP_ERROR_CHECK(httpd_resp_send(request, "<h1>Redirecting to the onboarding...</h1>", HTTPD_RESP_USE_STRLEN));
+            ESP_ERROR_CHECK(httpd_resp_send(request, "<h1>Redirecting...</h1>", HTTPD_RESP_USE_STRLEN));
         }
         else
         {
