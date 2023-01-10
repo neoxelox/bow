@@ -135,6 +135,7 @@ namespace server
         ESP_ERROR_CHECK(httpd_register_uri_handler(this->espServer, &this->apiPostDevicesURIHandler));
         ESP_ERROR_CHECK(httpd_register_uri_handler(this->espServer, &this->apiPutDeviceURIHandler));
         ESP_ERROR_CHECK(httpd_register_uri_handler(this->espServer, &this->apiDeleteDeviceURIHandler));
+        ESP_ERROR_CHECK(httpd_register_uri_handler(this->espServer, &this->apiPostDeviceActuateURIHandler));
 
         ESP_ERROR_CHECK(httpd_register_uri_handler(this->espServer, &this->apiGetTriggersURIHandler));
         ESP_ERROR_CHECK(httpd_register_uri_handler(this->espServer, &this->apiGetTriggerURIHandler));
@@ -899,6 +900,85 @@ namespace server
 
     esp_err_t Server::apiPostDevicesHandler(httpd_req_t *request)
     {
+        // Authenticate request user
+        user::User *reqUser = Instance->checkToken(request);
+        if (reqUser == NULL)
+        {
+            ESP_ERROR_CHECK(Instance->sendError(request, Errors::Unauthorized, NULL));
+            return ESP_FAIL;
+        }
+
+        // Bind request JSON
+        cJSON *reqJSON = NULL;
+        ESP_ERROR_CHECK(Instance->recvJSON(request, &reqJSON));
+
+        // Check if a device with the same name already exists
+        device::Device *exDevice = Instance->device->GetByName(cJSON_GetObjectItem(reqJSON, "name")->valuestring);
+        if (exDevice != NULL)
+        {
+            delete exDevice;
+            cJSON_Delete(reqJSON);
+            delete reqUser;
+            ESP_ERROR_CHECK(Instance->sendError(request, Errors::InvalidRequest, "Device already exists"));
+            return ESP_FAIL;
+        }
+
+        // Check if the type is valid
+        if (strcmp(cJSON_GetObjectItem(reqJSON, "type")->valuestring, device::Types::Sensor) &&
+            strcmp(cJSON_GetObjectItem(reqJSON, "type")->valuestring, device::Types::Actuator))
+        {
+            cJSON_Delete(reqJSON);
+            delete reqUser;
+            ESP_ERROR_CHECK(Instance->sendError(request, Errors::InvalidRequest, "Type is invalid"));
+            return ESP_FAIL;
+        }
+
+        // Check if the subtype is valid
+        device::Context context;
+        cJSON *reqContext = cJSON_GetObjectItem(reqJSON, "context");
+
+        if (!strcmp(cJSON_GetObjectItem(reqJSON, "subtype")->valuestring, device::Subtypes::Button))
+        {
+            context.Button.Command = cJSON_GetObjectItem(reqContext, "command")->valuestring;
+            context.Button.Emoji = cJSON_GetObjectItem(reqContext, "emoji")->valuestring;
+        }
+        else if (!strcmp(cJSON_GetObjectItem(reqJSON, "subtype")->valuestring, device::Subtypes::Bistate))
+        {
+            context.Bistate.Identifier1 = cJSON_GetObjectItem(reqContext, "identifier1")->valuestring;
+            context.Bistate.Emoji1 = cJSON_GetObjectItem(reqContext, "emoji1")->valuestring;
+            context.Bistate.Identifier2 = cJSON_GetObjectItem(reqContext, "identifier2")->valuestring;
+            context.Bistate.Emoji2 = cJSON_GetObjectItem(reqContext, "emoji2")->valuestring;
+            context.Bistate.State = cJSON_GetObjectItem(reqContext, "state")->valueint;
+        }
+        else
+        {
+            cJSON_Delete(reqJSON);
+            delete reqUser;
+            ESP_ERROR_CHECK(Instance->sendError(request, Errors::InvalidRequest, "Subtype is invalid"));
+            return ESP_FAIL;
+        }
+
+        // Create new device
+        device::Device newDevice(
+            cJSON_GetObjectItem(reqJSON, "name")->valuestring,
+            cJSON_GetObjectItem(reqJSON, "type")->valuestring,
+            cJSON_GetObjectItem(reqJSON, "subtype")->valuestring,
+            cJSON_GetObjectItem(reqJSON, "protocol")->valueint,
+            context,
+            cJSON_GetObjectItem(reqJSON, "emoji")->valuestring,
+            reqUser->Name,
+            Instance->chron->Now());
+
+        cJSON_Delete(reqJSON);
+        delete reqUser;
+
+        Instance->device->Set(&newDevice);
+
+        // Send response JSON
+        cJSON *resJSON = newDevice.JSON();
+        ESP_ERROR_CHECK(Instance->sendJSON(request, resJSON, Statuses::_200));
+        cJSON_Delete(resJSON);
+
         return ESP_OK;
     }
 
@@ -908,6 +988,11 @@ namespace server
     }
 
     esp_err_t Server::apiDeleteDeviceHandler(httpd_req_t *request)
+    {
+        return ESP_OK;
+    }
+
+    esp_err_t Server::apiPostDeviceActuateHandler(httpd_req_t *request)
     {
         return ESP_OK;
     }
@@ -1042,7 +1127,7 @@ namespace server
             return ESP_FAIL;
         }
 
-        // Check if schedule is valid
+        // Check if the schedule is valid
         if (!Instance->trigger->IsScheduleValid(cJSON_GetObjectItem(reqJSON, "schedule")->valuestring))
         {
             delete actuator;
@@ -1155,7 +1240,7 @@ namespace server
         // Update schedule if present
         if (cJSON_GetObjectItem(reqJSON, "schedule") != NULL)
         {
-            // Check if schedule is valid
+            // Check if the schedule is valid
             if (!Instance->trigger->IsScheduleValid(cJSON_GetObjectItem(reqJSON, "schedule")->valuestring))
             {
                 cJSON_Delete(reqJSON);

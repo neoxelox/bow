@@ -115,6 +115,7 @@ namespace server
         httpd_uri_t apiPostDevicesURIHandler = {"/api/devices", Methods::POST, apiPostDevicesHandler};
         httpd_uri_t apiPutDeviceURIHandler = {"/api/devices/*", Methods::PUT, apiPutDeviceHandler};
         httpd_uri_t apiDeleteDeviceURIHandler = {"/api/devices/*", Methods::DELETE, apiDeleteDeviceHandler};
+        httpd_uri_t apiPostDeviceActuateURIHandler = {"/api/devices/actuate/*", Methods::POST, apiPostDeviceActuateHandler};
 
         httpd_uri_t apiGetTriggersURIHandler = {"/api/triggers", Methods::GET, apiGetTriggersHandler};
         httpd_uri_t apiGetTriggerURIHandler = {"/api/triggers/*", Methods::GET, apiGetTriggerHandler};
@@ -162,6 +163,7 @@ namespace server
         static esp_err_t apiPostDevicesHandler(httpd_req_t *request);
         static esp_err_t apiPutDeviceHandler(httpd_req_t *request);
         static esp_err_t apiDeleteDeviceHandler(httpd_req_t *request);
+        static esp_err_t apiPostDeviceActuateHandler(httpd_req_t *request);
 
         static esp_err_t apiGetTriggersHandler(httpd_req_t *request);
         static esp_err_t apiGetTriggerHandler(httpd_req_t *request);
