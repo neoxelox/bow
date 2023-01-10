@@ -53,8 +53,8 @@ namespace main
             Instance->provisioner = provisioner::Provisioner::New(Instance->logger, Instance->status, Instance->database);
             Instance->chron = chron::Controller::New(Instance->logger, Instance->provisioner);
             Instance->user = user::Controller::New(Instance->logger, Instance->database);
-            Instance->device = device::Controller::New(Instance->logger, Instance->database);
             Instance->role = role::Controller::New(Instance->logger, Instance->database);
+            Instance->device = device::Controller::New(Instance->logger, Instance->database);
             Instance->receiver = device::Receiver::New(Instance->logger, Instance->status, Instance->device);
             Instance->transmitter = device::Transmitter::New(Instance->logger, Instance->status);
             Instance->trigger = trigger::Controller::New(Instance->logger, Instance->chron, Instance->transmitter,
