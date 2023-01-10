@@ -1127,6 +1127,64 @@ namespace server
 
     esp_err_t Server::apiPostDeviceActuateHandler(httpd_req_t *request)
     {
+        // Authenticate request user
+        user::User *reqUser = Instance->checkToken(request);
+        if (reqUser == NULL)
+        {
+            ESP_ERROR_CHECK(Instance->sendError(request, Errors::Unauthorized, NULL));
+            return ESP_FAIL;
+        }
+
+        // Get name path param
+        const char *name = Instance->getPathParam(request);
+
+        // Get actuator
+        device::Device *actuator = Instance->device->GetByName(name);
+        free((void *)name);
+        if (actuator == NULL)
+        {
+            delete reqUser;
+            ESP_ERROR_CHECK(Instance->sendError(request, Errors::InvalidRequest, "Actuator doesn't exist"));
+            return ESP_FAIL;
+        }
+
+        // Check if triggered device is an actuator
+        if (strcmp(actuator->Type, device::Types::Actuator))
+        {
+            delete actuator;
+            delete reqUser;
+            ESP_ERROR_CHECK(Instance->sendError(request, Errors::InvalidRequest, "Device is not an actuator"));
+            return ESP_FAIL;
+        }
+
+        // Check if the requesting user role includes the actuator or it is an admin
+        if (!Instance->role->Includes(reqUser->Role, actuator) && !Instance->user->Belongs(reqUser, &role::System::Admin))
+        {
+            delete actuator;
+            delete reqUser;
+            ESP_ERROR_CHECK(Instance->sendError(request, Errors::NoPermission, "Cannot trigger actuator"));
+            return ESP_FAIL;
+        }
+
+        delete reqUser;
+
+        device::Packet command = device::Packet();
+        command.Protocol = actuator->Protocol;
+
+        // Make packet depending on actuator subtype
+        if (!strcmp(actuator->Subtype, device::Subtypes::Button))
+            strcpy(command.Data, actuator->Context.Button.Command);
+
+        // Send command to actuator
+        Instance->transmitter->Send(&command);
+
+        delete actuator;
+
+        // Send response JSON
+        cJSON *resJSON = cJSON_CreateObject();
+        ESP_ERROR_CHECK(Instance->sendJSON(request, resJSON, Statuses::_200));
+        cJSON_Delete(resJSON);
+
         return ESP_OK;
     }
 
