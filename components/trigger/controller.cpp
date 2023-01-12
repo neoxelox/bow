@@ -153,6 +153,10 @@ namespace trigger
                 err = NULL;
                 expr = NULL;
 
+                // Ensure we are not in the past
+                if (now < triggers[i].CreatedAt)
+                    continue;
+
                 // Fix schedule seconds
                 expr = Instance->fixSchedule(triggers[i].Schedule);
 

@@ -22,6 +22,7 @@ namespace device
     static const int MIN_DATA_PULSES = 64;     // Min PROTOCOLS(Data): 32 (x2) bits
     static const int MAX_DATA_ZERO_PULSES = 2; // Max PROTOCOLS(Data.Zero)
     static const int MAX_DATA_ONE_PULSES = 2;  // Max PROTOCOLS(Data.One)
+    static const int MAX_DATA_BIT_PULSES = MAX_DATA_ZERO_PULSES > MAX_DATA_ONE_PULSES ? MAX_DATA_ZERO_PULSES : MAX_DATA_ONE_PULSES;
 
     // NOTE: ESP32 cannot use floats in ISRs.
 
@@ -75,7 +76,7 @@ namespace device
     {
     public:
         uint8_t Protocol;
-        char Data[MAX_DATA_PULSES + 1]; // '\0' terminated c-string
+        char Data[MAX_DATA_PULSES / MAX_DATA_BIT_PULSES + 1]; // '\0' terminated c-string
     };
 
     namespace Types
@@ -174,7 +175,7 @@ namespace device
         int64_t isrLastLastTime = 0;
         int64_t isrLastTime = 0;
         bool isrIsReceivingData = false;
-        char isrData[MAX_DATA_PULSES + 1] = {}; // '\0' terminated c-string
+        char isrData[MAX_DATA_PULSES / MAX_DATA_BIT_PULSES + 1] = {}; // '\0' terminated c-string
 
     private:
         static void IRAM_ATTR isrFunc(void *args);

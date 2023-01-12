@@ -108,7 +108,7 @@ namespace device
                         {
                             // Publish packet to the queue
                             Packet *packet = new Packet{++protocol};
-                            memcpy(packet->Data, Instance->isrData, MAX_DATA_PULSES + 1);
+                            strcpy(packet->Data, Instance->isrData);
                             xQueueSendFromISR(Instance->queue, &packet, NULL);
                         }
                     }
