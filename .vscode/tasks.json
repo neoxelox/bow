@@ -288,9 +288,9 @@
       "label": "OpenOCD: Start openOCD no RTOS",
       "type": "shell",
       "isBackground": true,
-      "command": "openocd -c \"set ESP_RTOS none\" -s ${command:espIdf.getOpenOcdScriptValue} ${command:espIdf.getOpenOcdConfigs}",
+      "command": "openocd -c \"set ESP_RTOS none\" -c \"set ESP_FLASH_SIZE 0\" -s ${command:espIdf.getOpenOcdScriptValue} ${command:espIdf.getOpenOcdConfigs}",
       "windows": {
-        "command": "openocd.exe -c \"set ESP_RTOS none\" -s ${command:espIdf.getOpenOcdScriptValue} ${command:espIdf.getOpenOcdConfigs}",
+        "command": "openocd.exe -c \"set ESP_RTOS none\" -c \"set ESP_FLASH_SIZE 0\" -s ${command:espIdf.getOpenOcdScriptValue} ${command:espIdf.getOpenOcdConfigs}",
         "options": {
           "env": {
             "PATH": "${env:PATH};${config:idf.customExtraPaths}"
