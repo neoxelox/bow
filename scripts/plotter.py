@@ -11,7 +11,9 @@ from matplotlib.lines import Line2D
 
 
 class Plotter:
-    def __init__(self, port: str, baud: int, length: int, match: str, axes: Axes) -> None:
+    def __init__(
+        self, port: str, baud: int, length: int, match: str, axes: Axes
+    ) -> None:
         self.connection = serial.Serial(port, baud, timeout=5)
         self.length = length
         self.matcher = re.compile(match)
@@ -34,7 +36,9 @@ class Plotter:
             # Create lines
             for i in range(len(self.rawData)):
                 self.lines.append(self.axes.plot([], [], label=f"Num {i}")[0])
-                self.data.append(collections.deque([0.0] * self.length, maxlen=self.length))
+                self.data.append(
+                    collections.deque([0.0] * self.length, maxlen=self.length)
+                )
 
     def animate(self, frame: int) -> List[Line2D]:
         for i, raw in enumerate(self.rawData):

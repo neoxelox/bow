@@ -1,4 +1,4 @@
-git+https://github.com/neoxelox/superinvoke.git
-python-dotenv==0.21.0
+superinvoke==1.0.5
+python-dotenv==1.0.0
 pyserial==3.5
-matplotlib==3.6.1
+matplotlib==3.8.1
