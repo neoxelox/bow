@@ -4,7 +4,7 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(EXTRA_COMPONENT_DIRS components vendor)
-set(PROJECT_VER "0.0.1")
+set(PROJECT_VER "0.0.2")
 
 add_compile_options(-fdiagnostics-color=always)
 
