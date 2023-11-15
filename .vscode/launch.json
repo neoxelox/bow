@@ -8,7 +8,7 @@
       "preLaunchTask": "OpenOCD: Start openOCD no RTOS",
       "cwd": "${workspaceFolder}/build",
       "program": "${workspaceRoot}/build/bow.elf",
-      "miDebuggerPath": "/home/alex/.espressif/tools/xtensa-esp32s3-elf/esp-2022r1-11.2.0/xtensa-esp32s3-elf/bin/xtensa-esp32s3-elf-gdb",
+      "miDebuggerPath": "/Users/alex/.espressif/tools/xtensa-esp-elf-gdb/12.1_20221002/xtensa-esp-elf-gdb/bin/xtensa-esp32s3-elf-gdb",
       "setupCommands": [
         { "text": "target remote 127.0.0.1:3333" },
         { "text": "set remote hardware-watchpoint-limit 2" },

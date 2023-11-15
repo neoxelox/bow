@@ -2,9 +2,9 @@
   "configurations": [
     {
       "name": "ESP-IDF",
-      "compilerPath": "/home/alex/.espressif/tools/xtensa-esp32s3-elf/esp-2022r1-11.2.0/xtensa-esp32s3-elf/bin/xtensa-esp32s3-elf-gcc",
+      "compilerPath": "/Users/alex/.espressif/tools/xtensa-esp32s3-elf/esp-12.2.0_20230208/xtensa-esp32s3-elf/bin/xtensa-esp32s3-elf-gcc",
       "cStandard": "c11",
-      "cppStandard": "c++17",
+      "cppStandard": "c++20",
       "includePath": [
         "${config:idf.espIdfPath}/components/**",
         "${config:idf.espIdfPathWin}/components/**",

@@ -83,7 +83,7 @@ namespace chron
 
     void Controller::start()
     {
-        if (sntp_enabled())
+        if (esp_sntp_enabled())
             return;
 
         // Configure NTP sync
@@ -101,11 +101,11 @@ namespace chron
 
     void Controller::stop()
     {
-        if (!sntp_enabled())
+        if (!esp_sntp_enabled())
             return;
 
         // Stop NTP sync
-        sntp_stop();
+        esp_sntp_stop();
 
         this->logger->Debug(TAG, "Stopped NTP sync");
     }
