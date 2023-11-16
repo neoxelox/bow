@@ -217,7 +217,7 @@ namespace device
         {
             xQueueReceive(Instance->queue, &packet, portMAX_DELAY);
 
-            Instance->logger->Debug(TAG, "Rx | Data: %s | Protocol: %d", packet->Data, packet->Protocol);
+            Instance->logger->Debug(TAG, "Rx: Data=%s | Protocol=%d", packet->Data, packet->Protocol);
             Instance->status->SetStatus(status::Statuses::Received);
 
             // Check if the received data is an identifier from an exisiting sensor

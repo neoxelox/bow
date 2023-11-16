@@ -18,21 +18,32 @@ namespace provisioner
 
     static const char *AP_SSID = "Diana Dot";
     static const char *AP_PASSWORD = "Y6LBBSMA";
+    static const char *AP_STATIC_IP_ADDRESS = "192.168.1.1";
+    static const char *AP_STATIC_IP_NETMASK = "255.255.255.0";
+    static const char *AP_STATIC_IP_GATEWAY = "192.168.1.1";
     static const uint8_t AP_MAX_CLIENTS = 5;
     static const uint8_t AP_CAPTIVE_PORTAL_PRIORITY = 16;
 
     static const int32_t STA_MAX_RETRIES = 10;
     static const TickType_t STA_RETRY_PERIOD = (5 * 60 * 1000) / portTICK_PERIOD_MS; // 5 minutes
 
+    typedef struct IP
+    {
+        const char *Address;
+        const char *Netmask;
+        const char *Gateway;
+    } IP;
+
     class Credentials
     {
     public:
         const char *SSID;
         const char *Password;
+        struct IP IP;
 
     public:
         Credentials();
-        Credentials(const char *ssid, const char *password);
+        Credentials(const char *ssid, const char *password, struct IP ip);
         Credentials(cJSON *src);
         ~Credentials();
         Credentials &operator=(const Credentials &other);

@@ -5,6 +5,7 @@
   "idf.port": "/dev/cu.usbmodem1101",
   "idf.flashType": "JTAG",
   "files.associations": {
+    ".env*": "dotenv",
     "esp_flash.h": "c",
     "cstdarg": "cpp",
     "esp_attr.h": "c",
@@ -47,6 +48,9 @@
     "list": "cpp",
     "sstream": "cpp",
     "random": "cpp",
-    "memory": "cpp"
+    "memory": "cpp",
+    "deque": "cpp",
+    "vector": "cpp",
+    "iterator": "cpp"
   }
 }

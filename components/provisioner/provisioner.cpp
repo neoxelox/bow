@@ -22,24 +22,38 @@ namespace provisioner
     {
         this->SSID = NULL;
         this->Password = NULL;
+        this->IP.Address = NULL;
+        this->IP.Netmask = NULL;
+        this->IP.Gateway = NULL;
     }
 
-    Credentials::Credentials(const char *ssid, const char *password)
+    Credentials::Credentials(const char *ssid, const char *password, struct IP ip)
     {
         this->SSID = strdup(ssid);
         this->Password = strdup(password);
+        this->IP.Address = strdup(ip.Address);
+        this->IP.Netmask = strdup(ip.Netmask);
+        this->IP.Gateway = strdup(ip.Gateway);
     }
 
     Credentials::Credentials(cJSON *src)
     {
         this->SSID = strdup(cJSON_GetObjectItem(src, "ssid")->valuestring);
         this->Password = strdup(cJSON_GetObjectItem(src, "password")->valuestring);
+
+        cJSON *ip = cJSON_GetObjectItem(src, "ip");
+        this->IP.Address = strdup(cJSON_GetObjectItem(ip, "address")->valuestring);
+        this->IP.Netmask = strdup(cJSON_GetObjectItem(ip, "netmask")->valuestring);
+        this->IP.Gateway = strdup(cJSON_GetObjectItem(ip, "gateway")->valuestring);
     }
 
     Credentials::~Credentials()
     {
         free((void *)this->SSID);
         free((void *)this->Password);
+        free((void *)this->IP.Address);
+        free((void *)this->IP.Netmask);
+        free((void *)this->IP.Gateway);
     }
 
     Credentials &Credentials::operator=(const Credentials &other)
@@ -49,9 +63,15 @@ namespace provisioner
 
         free((void *)this->SSID);
         free((void *)this->Password);
+        free((void *)this->IP.Address);
+        free((void *)this->IP.Netmask);
+        free((void *)this->IP.Gateway);
 
         this->SSID = strdup(other.SSID);
         this->Password = strdup(other.Password);
+        this->IP.Address = strdup(other.IP.Address);
+        this->IP.Netmask = strdup(other.IP.Netmask);
+        this->IP.Gateway = strdup(other.IP.Gateway);
 
         return *this;
     }
@@ -62,6 +82,11 @@ namespace provisioner
 
         cJSON_AddStringToObject(root, "ssid", this->SSID);
         cJSON_AddStringToObject(root, "password", this->Password);
+
+        cJSON *ip = cJSON_AddObjectToObject(root, "ip");
+        cJSON_AddStringToObject(ip, "address", this->IP.Address);
+        cJSON_AddStringToObject(ip, "netmask", this->IP.Netmask);
+        cJSON_AddStringToObject(ip, "gateway", this->IP.Gateway);
 
         return root;
     }
@@ -136,7 +161,15 @@ namespace provisioner
         ESP_ERROR_CHECK(esp_wifi_set_ps(WIFI_PS_NONE)); // Disable Wi-Fi powersaving
         ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_AP, &cfg));
 
-        // TODO: Set static IP
+        // Set static IP
+        esp_netif_ip_info_t ipInfo;
+        ipInfo.ip.addr = ipaddr_addr(creds->IP.Address);
+        ipInfo.netmask.addr = ipaddr_addr(creds->IP.Netmask);
+        ipInfo.gw.addr = ipaddr_addr(creds->IP.Gateway);
+
+        ESP_ERROR_CHECK(esp_netif_dhcps_stop(this->apHandle));
+        ESP_ERROR_CHECK(esp_netif_set_ip_info(this->apHandle, &ipInfo));
+        ESP_ERROR_CHECK(esp_netif_dhcps_start(this->apHandle));
 
         // Start Wi-Fi in AP mode
         ESP_ERROR_CHECK(esp_wifi_start());
@@ -180,8 +213,6 @@ namespace provisioner
         ESP_ERROR_CHECK(esp_wifi_set_ps(WIFI_PS_NONE)); // Disable Wi-Fi powersaving
         ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_STA, &cfg));
 
-        // TODO: Set static IP
-
         // Start Wi-Fi in station mode
         ESP_ERROR_CHECK(esp_wifi_start());
     }
@@ -204,45 +235,51 @@ namespace provisioner
 
     void Provisioner::apFunc(void *args, esp_event_base_t base, int32_t id, void *data)
     {
-        // TODO: Make this better, else ifs?
-        esp_netif_ip_info_t ipInfo;
-        char ip[16 + 1];
-        char netmask[16 + 1];
-        char gateway[16 + 1];
-
         switch (id)
         {
         case WIFI_EVENT_AP_START:
+        {
             Instance->logger->Debug(TAG, "Started Wi-Fi as access point");
 
             // Start captive portal DNS server
             capdns_start(AP_CAPTIVE_PORTAL_PRIORITY);
 
+            esp_netif_ip_info_t ipInfo;
             ESP_ERROR_CHECK(esp_netif_get_ip_info(esp_netif_get_handle_from_ifkey("WIFI_AP_DEF"), &ipInfo));
 
+            char ip[16 + 1];
+            char netmask[16 + 1];
+            char gateway[16 + 1];
             sprintf(ip, IPSTR, IP2STR(&ipInfo.ip));
             sprintf(netmask, IPSTR, IP2STR(&ipInfo.netmask));
             sprintf(gateway, IPSTR, IP2STR(&ipInfo.gw));
 
-            Instance->logger->Debug(TAG, "Got IP address %s | netmask %s | gateway %s", ip, netmask, gateway);
+            Instance->logger->Debug(TAG, "Got IP: Address=%s | Netmask=%s | Gateway=%s", ip, netmask, gateway);
             Instance->status->SetStatus(status::Statuses::Idle);
             break;
+        }
 
         case WIFI_EVENT_AP_STOP:
+        {
             // Stop captive portal DNS server
             capdns_stop();
 
             Instance->logger->Debug(TAG, "Stopped Wi-Fi as access point");
             Instance->status->SetStatus(status::Statuses::Error);
             break;
+        }
 
         case WIFI_EVENT_AP_STACONNECTED:
+        {
             Instance->logger->Debug(TAG, "Client connected to the Wi-Fi network");
             break;
+        }
 
         case WIFI_EVENT_AP_STADISCONNECTED:
+        {
             Instance->logger->Debug(TAG, "Client disconnected from the Wi-Fi network");
             break;
+        }
         }
     }
 
@@ -251,6 +288,7 @@ namespace provisioner
         switch (id)
         {
         case WIFI_EVENT_STA_START:
+        {
             Instance->logger->Debug(TAG, "Started Wi-Fi as station");
             Instance->status->SetStatus(status::Statuses::Provisioning);
 
@@ -258,32 +296,59 @@ namespace provisioner
             Instance->logger->Debug(TAG, "Trying to connect to the target Wi-Fi network");
             ESP_ERROR_CHECK(esp_wifi_connect());
             break;
+        }
 
         case WIFI_EVENT_STA_STOP:
+        {
             Instance->logger->Debug(TAG, "Stopped Wi-Fi as station");
             Instance->status->SetStatus(status::Statuses::Error);
             break;
+        }
 
         case WIFI_EVENT_STA_CONNECTED:
+        {
             Instance->logger->Debug(TAG, "Connected to the target Wi-Fi network");
             Instance->status->SetStatus(status::Statuses::Provisioning);
 
             // Reset retries
             Instance->staRetries = 0;
 
-            // TODO: Set static IP
+            // Stop DHCP client to set static IP
+            ESP_ERROR_CHECK(esp_netif_dhcpc_stop(Instance->staHandle));
+
+            // Get stored Wi-Fi credentials
+            Credentials *creds = Instance->GetCreds();
+            if (creds == NULL)
+                ESP_ERROR_CHECK(esp_wifi_disconnect());
+
+            // Set static IP
+            esp_netif_ip_info_t ipInfo;
+            ipInfo.ip.addr = ipaddr_addr(creds->IP.Address);
+            ipInfo.netmask.addr = ipaddr_addr(creds->IP.Netmask);
+            ipInfo.gw.addr = ipaddr_addr(creds->IP.Gateway);
+
+            delete creds;
+
+            esp_err_t err = esp_netif_set_ip_info(Instance->staHandle, &ipInfo);
+
+            // Force Wi-Fi disconnection to enter station retry loop if static IP cannot be set
+            if (err != ESP_OK)
+                ESP_ERROR_CHECK(esp_wifi_disconnect());
+
             break;
+        }
 
         case WIFI_EVENT_STA_DISCONNECTED:
+        {
             Instance->logger->Debug(TAG, "Disconnected from the target Wi-Fi network");
             Instance->status->SetStatus(status::Statuses::Error);
 
             // If retried for too long switch to softAP mode fallback
             if (Instance->staRetries == STA_MAX_RETRIES)
             {
-                Instance->logger->Debug(TAG, "Fallbacking into softAP mode: {\"ssid\":\"%s\",\"password\":\"%s\"}", AP_SSID, AP_PASSWORD);
+                Instance->logger->Debug(TAG, "Fallbacking into softAP mode: SSID=%s | Password=%s", AP_SSID, AP_PASSWORD);
                 Instance->staStop();
-                Credentials creds = Credentials(AP_SSID, AP_PASSWORD);
+                Credentials creds = Credentials(AP_SSID, AP_PASSWORD, {AP_STATIC_IP_ADDRESS, AP_STATIC_IP_NETMASK, AP_STATIC_IP_GATEWAY});
                 Instance->apStart(&creds);
             }
             // Ignore further Wi-Fi station disconnections. This can happen because when station
@@ -306,35 +371,36 @@ namespace provisioner
             }
 
             break;
+        }
 
         case WIFI_EVENT_STA_BSS_RSSI_LOW:
+        {
             Instance->logger->Debug(TAG, "Target Wi-Fi network connection weak");
             Instance->status->SetStatus(status::Statuses::Error);
             break;
+        }
         }
     }
 
     void Provisioner::ipFunc(void *args, esp_event_base_t base, int32_t id, void *data)
     {
-        // TODO: Make this better, else ifs?
-        ip_event_got_ip_t *event;
-
-        char ip[16 + 1];
-        char netmask[16 + 1];
-        char gateway[16 + 1];
-
         switch (id)
         {
         case IP_EVENT_STA_GOT_IP:
-            event = (ip_event_got_ip_t *)data;
+        {
+            ip_event_got_ip_t *event = (ip_event_got_ip_t *)data;
 
+            char ip[16 + 1];
+            char netmask[16 + 1];
+            char gateway[16 + 1];
             sprintf(ip, IPSTR, IP2STR(&event->ip_info.ip));
             sprintf(netmask, IPSTR, IP2STR(&event->ip_info.netmask));
             sprintf(gateway, IPSTR, IP2STR(&event->ip_info.gw));
 
-            Instance->logger->Debug(TAG, "Got IP address %s | netmask %s | gateway %s", ip, netmask, gateway);
+            Instance->logger->Debug(TAG, "Got IP: Address=%s | Netmask=%s | Gateway=%s", ip, netmask, gateway);
             Instance->status->SetStatus(status::Statuses::Idle);
             break;
+        }
         }
     }
 
@@ -357,19 +423,19 @@ namespace provisioner
         // Get stored Wi-Fi credentials
         creds = Instance->GetCreds();
 
-        // Start in station mode if credentials exists
+        // Start in station mode if credentials exist
         if (creds != NULL)
         {
             Instance->logger->Debug(TAG, "Wi-Fi credentials found");
-            Instance->logger->Debug(TAG, "Starting in station mode: {\"ssid\":\"%s\",\"password\":\"%s\"}", creds->SSID, creds->Password);
+            Instance->logger->Debug(TAG, "Starting in station mode: SSID=%s | Password=%s", creds->SSID, creds->Password);
             Instance->staStart(creds);
         }
         // Start in softAP mode if credentials don't exist
         else
         {
             Instance->logger->Debug(TAG, "Wi-Fi credentials not found");
-            Instance->logger->Debug(TAG, "Starting in softAP mode: {\"ssid\":\"%s\",\"password\":\"%s\"}", AP_SSID, AP_PASSWORD);
-            creds = new Credentials(AP_SSID, AP_PASSWORD);
+            Instance->logger->Debug(TAG, "Starting in softAP mode: SSID=%s | Password=%s", AP_SSID, AP_PASSWORD);
+            creds = new Credentials(AP_SSID, AP_PASSWORD, {AP_STATIC_IP_ADDRESS, AP_STATIC_IP_NETMASK, AP_STATIC_IP_GATEWAY});
             Instance->apStart(creds);
         }
 
@@ -390,11 +456,11 @@ namespace provisioner
             if (mode == WIFI_MODE_STA)
                 Instance->GetCurrent(&current);
 
-            // Go into station mode if credentials exists and Wi-Fi is not already station
-            // or credentials are different from the current Wi-Fi network
+            // Go into station mode if credentials exist and Wi-Fi is not already station
+            // or the network is different from the current one
             if (creds != NULL && (mode != WIFI_MODE_STA || strcmp(creds->SSID, (char *)current.ssid)))
             {
-                Instance->logger->Debug(TAG, "Retrying into station mode: {\"ssid\":\"%s\",\"password\":\"%s\"}", creds->SSID, creds->Password);
+                Instance->logger->Debug(TAG, "Retrying into station mode: SSID=%s | Password=%s", creds->SSID, creds->Password);
                 if (mode == WIFI_MODE_STA)
                     Instance->staStop();
                 else

@@ -26,9 +26,9 @@ namespace database
 
         nvs_stats_t info;
         Instance->Info(&info);
-        Instance->logger->Debug(TAG, "NVS entries: Used %d | Free %d | Total %d",
+        Instance->logger->Debug(TAG, "NVS entries: Used=%d | Free=%d | Total=%d",
                                 info.used_entries, info.free_entries, info.total_entries);
-        Instance->logger->Debug(TAG, "NVS namespaces: Total %d", info.namespace_count);
+        Instance->logger->Debug(TAG, "NVS namespaces: Total=%d", info.namespace_count);
 
         Instance->db = Instance->Open(DB_NAMESPACE);
 
@@ -66,7 +66,7 @@ namespace database
         ESP_ERROR_CHECK(nvs_flash_deinit_partition(PARTITION));
         ESP_ERROR_CHECK(nvs_flash_erase_partition(PARTITION));
         ESP_ERROR_CHECK(nvs_flash_init_partition(PARTITION));
-        this->logger->Debug(TAG, "Database reset");
+        this->logger->Debug(TAG, "Database reseted");
     }
 
     void Database::ScheduleReset()

@@ -121,8 +121,6 @@ namespace server
         ESP_ERROR_CHECK(httpd_register_err_handler(this->espServer, HTTPD_501_METHOD_NOT_IMPLEMENTED, this->errorHandler));
         ESP_ERROR_CHECK(httpd_register_err_handler(this->espServer, HTTPD_505_VERSION_NOT_SUPPORTED, this->errorHandler));
 
-        // TODO: logger middleware
-
         // Register api handlers
         ESP_ERROR_CHECK(httpd_register_uri_handler(this->espServer, &this->apiPostRegisterURIHandler));
         ESP_ERROR_CHECK(httpd_register_uri_handler(this->espServer, &this->apiPostLoginURIHandler));
@@ -413,19 +411,25 @@ namespace server
         switch (error)
         {
         case HTTPD_400_BAD_REQUEST:
+        {
             status = Errors::InvalidRequest.Status;
             cJSON_AddStringToObject(root, "code", Errors::InvalidRequest.Code);
             break;
+        }
 
         case HTTPD_404_NOT_FOUND:
+        {
             status = Errors::NotFound.Status;
             cJSON_AddStringToObject(root, "code", Errors::NotFound.Code);
             break;
+        }
 
         default:
+        {
             status = Errors::ServerGeneric.Status;
             cJSON_AddStringToObject(root, "code", Errors::ServerGeneric.Code);
             break;
+        }
         }
 
         const char *body = cJSON_PrintUnformatted(root);
@@ -576,7 +580,7 @@ namespace server
         if (user == NULL)
         {
             cJSON_Delete(reqJSON);
-            ESP_ERROR_CHECK(Instance->sendError(request, Errors::NoPermission, "User doesn't exist"));
+            ESP_ERROR_CHECK(Instance->sendError(request, Errors::NoPermission, "User or password invalid"));
             return ESP_FAIL;
         }
 
@@ -585,7 +589,7 @@ namespace server
         {
             cJSON_Delete(reqJSON);
             delete user;
-            ESP_ERROR_CHECK(Instance->sendError(request, Errors::NoPermission, "Passwords don't match"));
+            ESP_ERROR_CHECK(Instance->sendError(request, Errors::NoPermission, "User or password invalid"));
             return ESP_FAIL;
         }
 
@@ -1858,6 +1862,7 @@ namespace server
         // TODO: Put all chip info like: https://github.com/espressif/esp-idf/blob/master/examples/get-started/hello_world/main/hello_world_main.c
         cJSON *chipJSON = cJSON_AddObjectToObject(resJSON, "chip");
         cJSON *wifiJSON = cJSON_AddObjectToObject(chipJSON, "wifi");
+        // TODO: Put static IP for AP mode
         cJSON_AddStringToObject(wifiJSON, "name", provisioner::AP_SSID);
         cJSON_AddStringToObject(wifiJSON, "password", provisioner::AP_PASSWORD);
         // TODO: Put MAC using sprintf, MACSTR and MAC2STR
@@ -1953,10 +1958,12 @@ namespace server
 
         cJSON *resJSON = cJSON_CreateObject();
 
+        // TODO: Send stored Wi-Fi network
+
         // Get current Wi-Fi network
         provisioner::Credentials *creds = Instance->provisioner->GetCreds();
 
-        if (creds != NULL && Instance->provisioner->GetMode() == WIFI_MODE_STA)
+        if (Instance->provisioner->GetMode() == WIFI_MODE_STA)
         {
             wifi_ap_record_t info;
             Instance->provisioner->GetCurrent(&info);
@@ -2011,18 +2018,24 @@ namespace server
         // Bind request JSON
         cJSON *reqJSON = NULL;
         ESP_ERROR_CHECK(Instance->recvJSON(request, &reqJSON));
+        cJSON *reqIP = cJSON_GetObjectItem(reqJSON, "ip");
 
         // Create new credentials
-        provisioner::Credentials creds(cJSON_GetObjectItem(reqJSON, "name")->valuestring,
-                                       cJSON_GetObjectItem(reqJSON, "password")->valuestring);
+        provisioner::Credentials creds(
+            cJSON_GetObjectItem(reqJSON, "name")->valuestring,
+            cJSON_GetObjectItem(reqJSON, "password")->valuestring,
+            {cJSON_GetObjectItem(reqIP, "address")->valuestring,
+             cJSON_GetObjectItem(reqIP, "netmask")->valuestring,
+             cJSON_GetObjectItem(reqIP, "gateway")->valuestring});
+
         cJSON_Delete(reqJSON);
 
         // Save credentials
         Instance->provisioner->SetCreds(&creds);
 
         // Send response JSON
-        cJSON *resJSON = cJSON_CreateObject();
-        cJSON_AddStringToObject(resJSON, "name", creds.SSID);
+        cJSON *resJSON = creds.JSON();
+        cJSON_DeleteItemFromObject(resJSON, "password");
         ESP_ERROR_CHECK(Instance->sendJSON(request, resJSON, Statuses::_200));
         cJSON_Delete(resJSON);
 
