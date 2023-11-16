@@ -463,7 +463,8 @@ namespace server
 
             // Serve Gzipped frontend failing silently because it is a very big file
             esp_err_t err = Instance->sendFile(request, FRONTEND, Statuses::_200);
-            Instance->logger->Error(TAG, "error serving frontend: %d", err);
+            if (err != ESP_OK)
+                Instance->logger->Error(TAG, "error serving frontend: %d", err);
 
             return ESP_OK;
         }
