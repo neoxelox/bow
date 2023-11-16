@@ -94,10 +94,6 @@ namespace provisioner
         // Initialize default event loop
         ESP_ERROR_CHECK(esp_event_loop_create_default());
 
-        // Register LwIP event callbacks
-        ESP_ERROR_CHECK(esp_event_handler_instance_register(
-            IP_EVENT, ESP_EVENT_ANY_ID, Instance->ipFunc, NULL, NULL));
-
         // Initialize LwIP
         ESP_ERROR_CHECK(esp_netif_init());
 
@@ -105,6 +101,12 @@ namespace provisioner
         wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
         ESP_ERROR_CHECK(esp_wifi_init(&cfg));
         ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_NULL));
+
+        // Initialize Wi-Fi handlers in AP mode
+        Instance->apHandle = esp_netif_create_default_wifi_ap();
+
+        // Initialize Wi-Fi handlers in station mode
+        Instance->staHandle = esp_netif_create_default_wifi_sta();
 
         // Create provisioner delayed startup task and Wi-Fi station retrier
         xTaskCreatePinnedToCore(Instance->taskFunc, "Provisioner", 4 * 1024, NULL, 11, &Instance->taskHandle, tskNO_AFFINITY);
@@ -114,15 +116,8 @@ namespace provisioner
 
     void Provisioner::apStart(Credentials *creds)
     {
-        if (this->apHandle != NULL)
+        if (this->GetMode() == WIFI_MODE_AP)
             return;
-
-        // Initialize Wi-Fi in AP mode
-        this->apHandle = esp_netif_create_default_wifi_ap();
-
-        // Register Wi-Fi AP event callbacks
-        ESP_ERROR_CHECK(esp_event_handler_instance_register(
-            WIFI_EVENT, ESP_EVENT_ANY_ID, this->apFunc, NULL, &this->apEHInstance));
 
         // Configure Wi-Fi in AP mode
         wifi_config_t cfg = {
@@ -141,50 +136,29 @@ namespace provisioner
         ESP_ERROR_CHECK(esp_wifi_set_ps(WIFI_PS_NONE)); // Disable Wi-Fi powersaving
         ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_AP, &cfg));
 
+        // TODO: Set static IP
+
         // Start Wi-Fi in AP mode
         ESP_ERROR_CHECK(esp_wifi_start());
-
-        // Start captive portal DNS server
-        capdns_start(16);
     }
 
     void Provisioner::apStop()
     {
-        if (this->apHandle == NULL)
+        if (this->GetMode() != WIFI_MODE_AP)
             return;
-
-        // Stop captive portal DNS server
-        capdns_stop();
 
         // Stop Wi-Fi in AP mode
         ESP_ERROR_CHECK(esp_wifi_stop());
         ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_NULL));
-
-        // Unregister Wi-Fi AP event callbacks
-        ESP_ERROR_CHECK(esp_event_handler_instance_unregister(
-            WIFI_EVENT, ESP_EVENT_ANY_ID, this->apEHInstance));
-
-        // Destroy Wi-Fi AP network interface
-        esp_netif_destroy(this->apHandle);
-
-        // Clear Wi-Fi AP handle pointer (already freed)
-        this->apHandle = NULL;
     }
 
     void Provisioner::staStart(Credentials *creds)
     {
-        if (this->staHandle != NULL)
+        if (this->GetMode() == WIFI_MODE_STA)
             return;
 
         // Reset retries
         this->staRetries = 0;
-
-        // Initialize Wi-Fi in station mode
-        this->staHandle = esp_netif_create_default_wifi_sta();
-
-        // Register Wi-Fi station event callbacks
-        ESP_ERROR_CHECK(esp_event_handler_instance_register(
-            WIFI_EVENT, ESP_EVENT_ANY_ID, this->staFunc, NULL, &this->staEHInstance));
 
         // Configure Wi-Fi in station mode
         wifi_config_t cfg = {
@@ -206,13 +180,15 @@ namespace provisioner
         ESP_ERROR_CHECK(esp_wifi_set_ps(WIFI_PS_NONE)); // Disable Wi-Fi powersaving
         ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_STA, &cfg));
 
+        // TODO: Set static IP
+
         // Start Wi-Fi in station mode
         ESP_ERROR_CHECK(esp_wifi_start());
     }
 
     void Provisioner::staStop()
     {
-        if (this->staHandle == NULL)
+        if (this->GetMode() != WIFI_MODE_STA)
             return;
 
         // Signal that the disconnection is handled and retrying is not wanted
@@ -224,16 +200,6 @@ namespace provisioner
         // Stop Wi-Fi in station mode
         ESP_ERROR_CHECK(esp_wifi_stop());
         ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_NULL));
-
-        // Unregister Wi-Fi station event callbacks
-        ESP_ERROR_CHECK(esp_event_handler_instance_unregister(
-            WIFI_EVENT, ESP_EVENT_ANY_ID, this->staEHInstance));
-
-        // Destroy Wi-Fi station network interface
-        esp_netif_destroy(this->staHandle);
-
-        // Clear Wi-Fi station handle pointer (already freed)
-        this->staHandle = NULL;
     }
 
     void Provisioner::apFunc(void *args, esp_event_base_t base, int32_t id, void *data)
@@ -249,6 +215,9 @@ namespace provisioner
         case WIFI_EVENT_AP_START:
             Instance->logger->Debug(TAG, "Started Wi-Fi as access point");
 
+            // Start captive portal DNS server
+            capdns_start(AP_CAPTIVE_PORTAL_PRIORITY);
+
             ESP_ERROR_CHECK(esp_netif_get_ip_info(esp_netif_get_handle_from_ifkey("WIFI_AP_DEF"), &ipInfo));
 
             sprintf(ip, IPSTR, IP2STR(&ipInfo.ip));
@@ -260,6 +229,9 @@ namespace provisioner
             break;
 
         case WIFI_EVENT_AP_STOP:
+            // Stop captive portal DNS server
+            capdns_stop();
+
             Instance->logger->Debug(TAG, "Stopped Wi-Fi as access point");
             Instance->status->SetStatus(status::Statuses::Error);
             break;
@@ -270,10 +242,6 @@ namespace provisioner
 
         case WIFI_EVENT_AP_STADISCONNECTED:
             Instance->logger->Debug(TAG, "Client disconnected from the Wi-Fi network");
-            break;
-
-        default:
-            Instance->logger->Debug(TAG, "Unhandled Wi-Fi event %d", id);
             break;
         }
     }
@@ -313,18 +281,21 @@ namespace provisioner
             // If retried for too long switch to softAP mode fallback
             if (Instance->staRetries == STA_MAX_RETRIES)
             {
+                Instance->logger->Debug(TAG, "Fallbacking into softAP mode: {\"ssid\":\"%s\",\"password\":\"%s\"}", AP_SSID, AP_PASSWORD);
                 Instance->staStop();
                 Credentials creds = Credentials(AP_SSID, AP_PASSWORD);
                 Instance->apStart(&creds);
             }
-            // Ignore further Wi-Fi station disconnections, this can happen as when station
-            // is stopped it disconnects from the target Wi-Fi and triggers an event
+            // Ignore further Wi-Fi station disconnections. This can happen because when station
+            // is stopped, it disconnects from the target Wi-Fi and triggers an additional event
             else if (Instance->staRetries > STA_MAX_RETRIES)
             {
+                break;
             }
             // If disconnection is handled retrying is not wanted
             else if (Instance->staRetries == -1)
             {
+                break;
             }
             // Otherwise try to reconnect to target Wi-Fi network
             else
@@ -337,12 +308,8 @@ namespace provisioner
             break;
 
         case WIFI_EVENT_STA_BSS_RSSI_LOW:
-            Instance->logger->Debug(TAG, "Wi-Fi connection weak");
+            Instance->logger->Debug(TAG, "Target Wi-Fi network connection weak");
             Instance->status->SetStatus(status::Statuses::Error);
-            break;
-
-        default:
-            Instance->logger->Debug(TAG, "Unhandled Wi-Fi event %d", id);
             break;
         }
     }
@@ -368,10 +335,6 @@ namespace provisioner
             Instance->logger->Debug(TAG, "Got IP address %s | netmask %s | gateway %s", ip, netmask, gateway);
             Instance->status->SetStatus(status::Statuses::Idle);
             break;
-
-        default:
-            Instance->logger->Debug(TAG, "Unhandled IP event %d", id);
-            break;
         }
     }
 
@@ -381,6 +344,15 @@ namespace provisioner
 
         // Delay provisioner startup to let the other components initialize first
         vTaskDelay(STARTUP_DELAY);
+
+        // Register Wi-Fi AP, station and LwIP event callbacks for
+        // provisioner after all components have been initialized
+        ESP_ERROR_CHECK(esp_event_handler_instance_register(
+            WIFI_EVENT, ESP_EVENT_ANY_ID, Instance->apFunc, NULL, NULL));
+        ESP_ERROR_CHECK(esp_event_handler_instance_register(
+            WIFI_EVENT, ESP_EVENT_ANY_ID, Instance->staFunc, NULL, NULL));
+        ESP_ERROR_CHECK(esp_event_handler_instance_register(
+            IP_EVENT, ESP_EVENT_ANY_ID, Instance->ipFunc, NULL, NULL));
 
         // Get stored Wi-Fi credentials
         creds = Instance->GetCreds();
@@ -422,8 +394,7 @@ namespace provisioner
             // or credentials are different from the current Wi-Fi network
             if (creds != NULL && (mode != WIFI_MODE_STA || strcmp(creds->SSID, (char *)current.ssid)))
             {
-                Instance->logger->Debug(TAG, "Wi-Fi credentials found");
-                Instance->logger->Debug(TAG, "Going into station mode: {\"ssid\":\"%s\",\"password\":\"%s\"}", creds->SSID, creds->Password);
+                Instance->logger->Debug(TAG, "Retrying into station mode: {\"ssid\":\"%s\",\"password\":\"%s\"}", creds->SSID, creds->Password);
                 if (mode == WIFI_MODE_STA)
                     Instance->staStop();
                 else

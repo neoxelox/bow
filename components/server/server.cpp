@@ -54,7 +54,7 @@ namespace server
 
         Instance->espServer = NULL;
 
-        // Register Wi-Fi station/softAP and LwIP event callbacks
+        // Register Wi-Fi station, softAP and LwIP event callbacks
         ESP_ERROR_CHECK(esp_event_handler_instance_register(
             WIFI_EVENT, WIFI_EVENT_STA_DISCONNECTED, Instance->staFunc, NULL, NULL));
         ESP_ERROR_CHECK(esp_event_handler_instance_register(
@@ -76,6 +76,7 @@ namespace server
         esp_log_level_set("httpd_uri", ESP_LOG_ERROR);
         esp_log_level_set("httpd_txrx", ESP_LOG_ERROR);
         esp_log_level_set("httpd_parse", ESP_LOG_ERROR);
+        esp_log_level_set("httpd_sess", ESP_LOG_ERROR);
 
         return Instance;
     }
@@ -99,6 +100,7 @@ namespace server
             .lru_purge_enable = true,
             .recv_wait_timeout = 5,
             .send_wait_timeout = 5,
+            .enable_so_linger = true, // Evict frozen sockets early
             .uri_match_fn = httpd_uri_match_wildcard,
         };
 
@@ -458,7 +460,10 @@ namespace server
         {
             // Set Cache Control header so clients load the frontend faster
             ESP_ERROR_CHECK(httpd_resp_set_hdr(request, Headers::CacheControl, "max-age=604800, stale-while-revalidate=86400, stale-if-error=86400"));
-            ESP_ERROR_CHECK(Instance->sendFile(request, FRONTEND, Statuses::_200));
+
+            // Serve Gzipped frontend failing silently because it is a very big file
+            esp_err_t err = Instance->sendFile(request, FRONTEND, Statuses::_200);
+            Instance->logger->Error(TAG, "error serving frontend: %d", err);
 
             return ESP_OK;
         }
