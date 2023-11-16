@@ -147,6 +147,7 @@ namespace server
         static void apFunc(void *args, esp_event_base_t base, int32_t id, void *data);
         static void staFunc(void *args, esp_event_base_t base, int32_t id, void *data);
         static void ipFunc(void *args, esp_event_base_t base, int32_t id, void *data);
+        static bool uriMatcher(const char *reference, const char *uri, size_t len);
         static esp_err_t errorHandler(httpd_req_t *request, httpd_err_code_t error);
         static esp_err_t frontHandler(httpd_req_t *request);
 

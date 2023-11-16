@@ -101,7 +101,7 @@ namespace server
             .recv_wait_timeout = 5,
             .send_wait_timeout = 5,
             .enable_so_linger = true, // Evict frozen sockets early
-            .uri_match_fn = httpd_uri_match_wildcard,
+            .uri_match_fn = this->uriMatcher,
         };
 
         // Start HTTP server
@@ -389,6 +389,20 @@ namespace server
         // Start HTTP server when IP is got
         // IP_EVENT_STA_GOT_IP
         Instance->start();
+    }
+
+    bool Server::uriMatcher(const char *reference, const char *uri, size_t len)
+    {
+        // Use built-in URI wildcard matcher
+        bool matched = httpd_uri_match_wildcard(reference, uri, len);
+
+        if (matched)
+            // Log URI once. This is always at least true once because of the
+            // defined catch-all route. This is a poor man's version of a
+            // logger middleware
+            Instance->logger->Debug(TAG, "hit: %s", uri);
+
+        return matched;
     }
 
     esp_err_t Server::errorHandler(httpd_req_t *request, httpd_err_code_t error)
