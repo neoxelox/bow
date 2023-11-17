@@ -2047,36 +2047,91 @@ namespace server
 
         cJSON *resJSON = cJSON_CreateObject();
 
-        // TODO: Send stored Wi-Fi network
-
         // Get current Wi-Fi network
-        provisioner::Credentials *creds = Instance->provisioner->GetCreds();
-
         if (Instance->provisioner->GetMode() == WIFI_MODE_STA)
         {
-            wifi_ap_record_t info;
-            Instance->provisioner->GetCurrent(&info);
-
             cJSON *currentJSON = cJSON_AddObjectToObject(resJSON, "current");
-            cJSON_AddStringToObject(currentJSON, "name", (char *)info.ssid);
-            cJSON_AddNumberToObject(currentJSON, "strength", info.rssi);
-            // TODO: Add security info
-            cJSON_AddStringToObject(currentJSON, "security", "");
-            // TODO: Add IP info
-            cJSON_AddStringToObject(currentJSON, "address", "");
-            cJSON_AddStringToObject(currentJSON, "netmask", "");
-            cJSON_AddStringToObject(currentJSON, "gateway", "");
-            // TODO: Add MAC info using sprintf, MACSTR and MAC2STR
-            cJSON_AddStringToObject(currentJSON, "mac", "");
-            // TODO: Add DNS servers addresses
-            cJSON *dnsJSON = cJSON_AddObjectToObject(resJSON, "dns");
-            cJSON_AddStringToObject(dnsJSON, "main", "");
-            cJSON_AddStringToObject(dnsJSON, "backup", "");
+
+            wifi_ap_record_t networkInfo;
+            Instance->provisioner->GetCurrent(&networkInfo);
+
+            cJSON_AddStringToObject(currentJSON, "name", (char *)networkInfo.ssid);
+            cJSON_AddNumberToObject(currentJSON, "strength", networkInfo.rssi);
+
+            switch (networkInfo.authmode)
+            {
+            case WIFI_AUTH_OPEN:
+                cJSON_AddStringToObject(currentJSON, "security", "OPEN");
+                break;
+            case WIFI_AUTH_WEP:
+                cJSON_AddStringToObject(currentJSON, "security", "WEP");
+                break;
+            case WIFI_AUTH_WPA_PSK:
+                cJSON_AddStringToObject(currentJSON, "security", "WPA-PSK");
+                break;
+            case WIFI_AUTH_WPA2_PSK:
+                cJSON_AddStringToObject(currentJSON, "security", "WPA2-PSK");
+                break;
+            case WIFI_AUTH_WPA_WPA2_PSK:
+                cJSON_AddStringToObject(currentJSON, "security", "WPA/WPA2-PSK");
+                break;
+            case WIFI_AUTH_WPA2_ENTERPRISE:
+                cJSON_AddStringToObject(currentJSON, "security", "WPA2-ENT");
+                break;
+            case WIFI_AUTH_WPA3_PSK:
+                cJSON_AddStringToObject(currentJSON, "security", "WPA3-PSK");
+                break;
+            case WIFI_AUTH_WPA2_WPA3_PSK:
+                cJSON_AddStringToObject(currentJSON, "security", "WPA2/WPA3-PSK");
+                break;
+            case WIFI_AUTH_WAPI_PSK:
+                cJSON_AddStringToObject(currentJSON, "security", "WAPI-PSK");
+                break;
+            case WIFI_AUTH_OWE:
+                cJSON_AddStringToObject(currentJSON, "security", "OWE");
+                break;
+            case WIFI_AUTH_WPA3_ENT_192:
+                cJSON_AddStringToObject(currentJSON, "security", "WPA3-ENT");
+                break;
+            default:
+                cJSON_AddStringToObject(currentJSON, "security", "UNKNOWN");
+                break;
+            }
+
+            esp_netif_t *staHandle = esp_netif_get_handle_from_ifkey("WIFI_STA_DEF");
+
+            esp_netif_ip_info_t ipInfo;
+            ESP_ERROR_CHECK(esp_netif_get_ip_info(staHandle, &ipInfo));
+            char address[16 + 1], netmask[16 + 1], gateway[16 + 1];
+            sprintf(address, IPSTR, IP2STR(&ipInfo.ip));
+            sprintf(netmask, IPSTR, IP2STR(&ipInfo.netmask));
+            sprintf(gateway, IPSTR, IP2STR(&ipInfo.gw));
+
+            cJSON *ipJSON = cJSON_AddObjectToObject(currentJSON, "ip");
+            cJSON_AddStringToObject(ipJSON, "address", address);
+            cJSON_AddStringToObject(ipJSON, "netmask", netmask);
+            cJSON_AddStringToObject(ipJSON, "gateway", gateway);
+
+            uint8_t macInfo[6];
+            ESP_ERROR_CHECK(esp_read_mac(macInfo, ESP_MAC_WIFI_STA));
+            char mac[17 + 1];
+            sprintf(mac, MACSTR, MAC2STR(macInfo));
+
+            cJSON_AddStringToObject(currentJSON, "mac", mac);
+
+            esp_netif_dns_info_t dnsMainInfo, dnsBackupInfo;
+            ESP_ERROR_CHECK(esp_netif_get_dns_info(staHandle, ESP_NETIF_DNS_MAIN, &dnsMainInfo));
+            ESP_ERROR_CHECK(esp_netif_get_dns_info(staHandle, ESP_NETIF_DNS_BACKUP, &dnsBackupInfo));
+            char dnsMain[16 + 1], dnsBackup[16 + 1];
+            sprintf(dnsMain, IPSTR, IP2STR(&dnsMainInfo.ip.u_addr.ip4));
+            sprintf(dnsBackup, IPSTR, IP2STR(&dnsBackupInfo.ip.u_addr.ip4));
+
+            cJSON *dnsJSON = cJSON_AddObjectToObject(currentJSON, "dns");
+            cJSON_AddStringToObject(dnsJSON, "main", dnsMain);
+            cJSON_AddStringToObject(dnsJSON, "backup", dnsBackup);
         }
         else
             cJSON_AddNullToObject(resJSON, "current");
-
-        delete creds;
 
         // TODO: Get available Wi-Fi networks
         cJSON *availableJSON = cJSON_AddArrayToObject(resJSON, "available");

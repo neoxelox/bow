@@ -245,11 +245,9 @@ namespace provisioner
             capdns_start(AP_CAPTIVE_PORTAL_PRIORITY);
 
             esp_netif_ip_info_t ipInfo;
-            ESP_ERROR_CHECK(esp_netif_get_ip_info(esp_netif_get_handle_from_ifkey("WIFI_AP_DEF"), &ipInfo));
+            ESP_ERROR_CHECK(esp_netif_get_ip_info(Instance->apHandle, &ipInfo));
 
-            char ip[16 + 1];
-            char netmask[16 + 1];
-            char gateway[16 + 1];
+            char ip[16 + 1], netmask[16 + 1], gateway[16 + 1];
             sprintf(ip, IPSTR, IP2STR(&ipInfo.ip));
             sprintf(netmask, IPSTR, IP2STR(&ipInfo.netmask));
             sprintf(gateway, IPSTR, IP2STR(&ipInfo.gw));
@@ -404,9 +402,7 @@ namespace provisioner
         {
             ip_event_got_ip_t *event = (ip_event_got_ip_t *)data;
 
-            char ip[16 + 1];
-            char netmask[16 + 1];
-            char gateway[16 + 1];
+            char ip[16 + 1], netmask[16 + 1], gateway[16 + 1];
             sprintf(ip, IPSTR, IP2STR(&event->ip_info.ip));
             sprintf(netmask, IPSTR, IP2STR(&event->ip_info.netmask));
             sprintf(gateway, IPSTR, IP2STR(&event->ip_info.gw));
@@ -417,8 +413,7 @@ namespace provisioner
             ESP_ERROR_CHECK(esp_netif_get_dns_info(Instance->staHandle, ESP_NETIF_DNS_MAIN, &dnsMainInfo));
             ESP_ERROR_CHECK(esp_netif_get_dns_info(Instance->staHandle, ESP_NETIF_DNS_BACKUP, &dnsBackupInfo));
 
-            char dnsMain[16 + 1];
-            char dnsBackup[16 + 1];
+            char dnsMain[16 + 1], dnsBackup[16 + 1];
             sprintf(dnsMain, IPSTR, IP2STR(&dnsMainInfo.ip.u_addr.ip4));
             sprintf(dnsBackup, IPSTR, IP2STR(&dnsBackupInfo.ip.u_addr.ip4));
 
