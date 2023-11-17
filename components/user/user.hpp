@@ -12,6 +12,8 @@ namespace user
     static const char *DB_NAMESPACE = "user";
     static const uint8_t TOKEN_SIZE = 16;
     static const char *TOKEN_CHARSET = "0123456789abcdefghijklmnopqrstuvwxyz";
+    static const uint8_t PASSWORD_HASH_SIZE = 128;
+    static const char *PASSWORD_HASH_CHARSET = "0123456789abcdef";
 
     class User
     {
@@ -60,6 +62,7 @@ namespace user
         void Delete(const char *name);
         void Drop();
         void GenerateToken(char *token);
+        void HashPassword(const char *plain_password, char *hashed_password);
         bool Belongs(const char *user, const char *role);
         bool Belongs(User *user, const char *role);
         bool Belongs(const char *user, role::Role *role);

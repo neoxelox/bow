@@ -1,6 +1,7 @@
 #include <string.h>
 #include "esp_err.h"
 #include "esp_random.h"
+#include "sha/sha_block.h"
 #include "cJSON.h"
 #include "logger.hpp"
 #include "role.hpp"
@@ -230,6 +231,21 @@ namespace user
             token[i] = TOKEN_CHARSET[esp_random() % size];
 
         token[TOKEN_SIZE] = '\0';
+    }
+
+    void Controller::HashPassword(const char *plain_password, char *hashed_password)
+    {
+        uint8_t hash[64] = {0};
+
+        esp_sha(SHA2_512, (const unsigned char *)plain_password, strlen(plain_password), hash);
+
+        for (int i = 0; i < 64; i++)
+        {
+            hashed_password[i * 2] = PASSWORD_HASH_CHARSET[(hash[i] >> 4) & 0xF];
+            hashed_password[i * 2 + 1] = PASSWORD_HASH_CHARSET[hash[i] & 0xF];
+        }
+
+        hashed_password[PASSWORD_HASH_SIZE] = '\0';
     }
 
     bool Controller::Belongs(const char *user, const char *role)

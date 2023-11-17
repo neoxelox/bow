@@ -539,10 +539,14 @@ namespace server
         char token[user::TOKEN_SIZE + 1];
         Instance->user->GenerateToken(token);
 
+        // Hash password
+        char password[user::PASSWORD_HASH_SIZE + 1];
+        Instance->user->HashPassword(cJSON_GetObjectItem(reqJSON, "password")->valuestring, password);
+
         // Create new user
         user::User newUser(
             cJSON_GetObjectItem(reqJSON, "name")->valuestring,
-            cJSON_GetObjectItem(reqJSON, "password")->valuestring,
+            password,
             token,
             Instance->user->Count() > 1 ? role::System::Guest.Name : role::System::Admin.Name,
             cJSON_GetObjectItem(reqJSON, "emoji")->valuestring,
@@ -584,8 +588,12 @@ namespace server
             return ESP_FAIL;
         }
 
+        // Hash login password
+        char password[user::PASSWORD_HASH_SIZE + 1];
+        Instance->user->HashPassword(cJSON_GetObjectItem(reqJSON, "password")->valuestring, password);
+
         // Check if passwords match
-        if (strcmp(cJSON_GetObjectItem(reqJSON, "password")->valuestring, user->Password))
+        if (strcmp(password, user->Password))
         {
             cJSON_Delete(reqJSON);
             delete user;
@@ -734,7 +742,12 @@ namespace server
         if (cJSON_GetObjectItem(reqJSON, "password") != NULL)
         {
             free((void *)user->Password);
-            user->Password = strdup(cJSON_GetObjectItem(reqJSON, "password")->valuestring);
+
+            // Hash password
+            char password[user::PASSWORD_HASH_SIZE + 1];
+            Instance->user->HashPassword(cJSON_GetObjectItem(reqJSON, "password")->valuestring, password);
+
+            user->Password = strdup(password);
         }
 
         // Update emoji if present
@@ -1861,13 +1874,13 @@ namespace server
 
         // TODO: Put all chip info like: https://github.com/espressif/esp-idf/blob/master/examples/get-started/hello_world/main/hello_world_main.c
         cJSON *chipJSON = cJSON_AddObjectToObject(resJSON, "chip");
-        cJSON *wifiJSON = cJSON_AddObjectToObject(chipJSON, "wifi");
+        cJSON *networkJSON = cJSON_AddObjectToObject(chipJSON, "network");
         // TODO: Put static IP for AP mode
         // TODO: Put static DNS for AP mode
-        cJSON_AddStringToObject(wifiJSON, "name", provisioner::AP_SSID);
-        cJSON_AddStringToObject(wifiJSON, "password", provisioner::AP_PASSWORD);
+        cJSON_AddStringToObject(networkJSON, "name", provisioner::AP_SSID);
+        cJSON_AddStringToObject(networkJSON, "password", provisioner::AP_PASSWORD);
         // TODO: Put MAC using sprintf, MACSTR and MAC2STR
-        cJSON_AddStringToObject(wifiJSON, "mac", "");
+        cJSON_AddStringToObject(networkJSON, "mac", "");
 
         // Get firmware info
         const esp_app_desc_t *appDesc = esp_app_get_description();

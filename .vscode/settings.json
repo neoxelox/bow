@@ -51,6 +51,9 @@
     "memory": "cpp",
     "deque": "cpp",
     "vector": "cpp",
-    "iterator": "cpp"
+    "iterator": "cpp",
+    "sha_types.h": "c",
+    "soc_caps.h": "c",
+    "sha512.h": "c"
   }
 }
