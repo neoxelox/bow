@@ -18,6 +18,7 @@
 #include "esp_app_desc.h"
 #include "esp_system.h"
 #include "esp_flash.h"
+#include "esp_psram.h"
 #include "logger.hpp"
 #include "database.hpp"
 #include "provisioner.hpp"
@@ -395,7 +396,7 @@ namespace server
         bool matched = httpd_uri_match_wildcard(reference, uri, len);
 
         if (matched)
-            // Log URI once. This is always at least true once because of the
+            // Log URI once. This is at least true once because of the
             // defined catch-all route. This is a poor man's version of a
             // logger middleware
             Instance->logger->Debug(TAG, "hit: %s", uri);
@@ -1867,62 +1868,136 @@ namespace server
         cJSON *resJSON = cJSON_CreateObject();
 
         // Get chip info
+        cJSON *chipJSON = cJSON_AddObjectToObject(resJSON, "chip");
+
         esp_chip_info_t chipInfo;
         esp_chip_info(&chipInfo);
-        uint8_t mac;
-        ESP_ERROR_CHECK(esp_read_mac(&mac, ESP_MAC_WIFI_SOFTAP));
 
-        // TODO: Put all chip info like: https://github.com/espressif/esp-idf/blob/master/examples/get-started/hello_world/main/hello_world_main.c
-        cJSON *chipJSON = cJSON_AddObjectToObject(resJSON, "chip");
-        cJSON *networkJSON = cJSON_AddObjectToObject(chipJSON, "network");
-        // TODO: Put static IP for AP mode
-        // TODO: Put static DNS for AP mode
-        cJSON_AddStringToObject(networkJSON, "name", provisioner::AP_SSID);
-        cJSON_AddStringToObject(networkJSON, "password", provisioner::AP_PASSWORD);
-        // TODO: Put MAC using sprintf, MACSTR and MAC2STR
-        cJSON_AddStringToObject(networkJSON, "mac", "");
+        switch (chipInfo.model)
+        {
+        case CHIP_ESP32:
+            cJSON_AddStringToObject(chipJSON, "model", "ESP32");
+            break;
+        case CHIP_ESP32S2:
+            cJSON_AddStringToObject(chipJSON, "model", "ESP32-S2");
+            break;
+        case CHIP_ESP32S3:
+            cJSON_AddStringToObject(chipJSON, "model", "ESP32-S3");
+            break;
+        case CHIP_ESP32C2:
+            cJSON_AddStringToObject(chipJSON, "model", "ESP32-C2");
+            break;
+        case CHIP_ESP32C3:
+            cJSON_AddStringToObject(chipJSON, "model", "ESP32-C3");
+            break;
+        case CHIP_ESP32C6:
+            cJSON_AddStringToObject(chipJSON, "model", "ESP32-C6");
+            break;
+        case CHIP_ESP32H2:
+            cJSON_AddStringToObject(chipJSON, "model", "ESP32-H2");
+            break;
+        default:
+            cJSON_AddStringToObject(chipJSON, "model", "UNKNOWN");
+            break;
+        }
+
+        char revision[8 + 1];
+        sprintf(revision, "%d.%d", chipInfo.revision / 100, chipInfo.revision % 100);
+
+        cJSON_AddStringToObject(chipJSON, "revision", revision);
+
+        cJSON_AddNumberToObject(chipJSON, "cores", chipInfo.cores);
+
+        uint32_t flash, ram;
+        ESP_ERROR_CHECK(esp_flash_get_size(NULL, &flash));
+        ram = esp_psram_get_size();
+
+        cJSON_AddNumberToObject(chipJSON, "flash", flash);
+        cJSON_AddNumberToObject(chipJSON, "ram", ram);
+
+        cJSON *featuresJSON = cJSON_AddArrayToObject(chipJSON, "features");
+        if (chipInfo.features & CHIP_FEATURE_WIFI_BGN)
+            cJSON_AddItemToArray(featuresJSON, cJSON_CreateString("Wi-Fi 2.4GHz"));
+        if (chipInfo.features & CHIP_FEATURE_BT)
+            cJSON_AddItemToArray(featuresJSON, cJSON_CreateString("Bluetooth 5"));
+        if (chipInfo.features & CHIP_FEATURE_BLE)
+            cJSON_AddItemToArray(featuresJSON, cJSON_CreateString("Bluetooth 5 LE"));
+        if (chipInfo.features & CHIP_FEATURE_IEEE802154)
+            cJSON_AddItemToArray(featuresJSON, cJSON_CreateString("Zigbee/Thread 802.15.4"));
+        if (chipInfo.features & CHIP_FEATURE_EMB_FLASH)
+            cJSON_AddItemToArray(featuresJSON, cJSON_CreateString("Flash embedded"));
+        else
+            cJSON_AddItemToArray(featuresJSON, cJSON_CreateString("Flash external"));
+        if (chipInfo.features & CHIP_FEATURE_EMB_PSRAM)
+            cJSON_AddItemToArray(featuresJSON, cJSON_CreateString("PSRAM embedded"));
+        else
+            cJSON_AddItemToArray(featuresJSON, cJSON_CreateString("PSRAM external"));
+
+        // Get built-in softAP network info
+        cJSON *networkJSON = cJSON_AddObjectToObject(resJSON, "network");
+
+        if (Instance->provisioner->GetMode() == WIFI_MODE_AP)
+        {
+            esp_netif_ip_info_t ipInfo;
+            ESP_ERROR_CHECK(esp_netif_get_ip_info(esp_netif_get_handle_from_ifkey("WIFI_AP_DEF"), &ipInfo));
+            char address[16 + 1], netmask[16 + 1], gateway[16 + 1];
+            sprintf(address, IPSTR, IP2STR(&ipInfo.ip));
+            sprintf(netmask, IPSTR, IP2STR(&ipInfo.netmask));
+            sprintf(gateway, IPSTR, IP2STR(&ipInfo.gw));
+
+            cJSON_AddStringToObject(networkJSON, "name", provisioner::AP_SSID);
+            cJSON_AddStringToObject(networkJSON, "password", provisioner::AP_PASSWORD);
+
+            cJSON *ipJSON = cJSON_AddObjectToObject(networkJSON, "ip");
+            cJSON_AddStringToObject(ipJSON, "address", address);
+            cJSON_AddStringToObject(ipJSON, "netmask", netmask);
+            cJSON_AddStringToObject(ipJSON, "gateway", gateway);
+        }
+        else
+        {
+            cJSON_AddStringToObject(networkJSON, "name", provisioner::AP_SSID);
+            cJSON_AddStringToObject(networkJSON, "password", provisioner::AP_PASSWORD);
+
+            cJSON *ipJSON = cJSON_AddObjectToObject(networkJSON, "ip");
+            cJSON_AddStringToObject(ipJSON, "address", provisioner::AP_STATIC_IP_ADDRESS);
+            cJSON_AddStringToObject(ipJSON, "netmask", provisioner::AP_STATIC_IP_NETMASK);
+            cJSON_AddStringToObject(ipJSON, "gateway", provisioner::AP_STATIC_IP_GATEWAY);
+        }
+
+        uint8_t macInfo[6];
+        ESP_ERROR_CHECK(esp_read_mac(macInfo, ESP_MAC_WIFI_SOFTAP));
+        char mac[17 + 1];
+        sprintf(mac, MACSTR, MAC2STR(macInfo));
+
+        cJSON_AddStringToObject(networkJSON, "mac", mac);
 
         // Get firmware info
+        cJSON *firmwareJSON = cJSON_AddObjectToObject(resJSON, "firmware");
+
         const esp_app_desc_t *appDesc = esp_app_get_description();
 
-        cJSON *firmwareJSON = cJSON_AddObjectToObject(resJSON, "firmware");
         cJSON *sdkJSON = cJSON_AddObjectToObject(firmwareJSON, "sdk");
         cJSON_AddStringToObject(sdkJSON, "name", "ESP-IDF");
-        cJSON_AddStringToObject(sdkJSON, "version", appDesc->idf_ver);
+        cJSON_AddStringToObject(sdkJSON, "version", &appDesc->idf_ver[1]); // Ignore "v" in version
+
         cJSON *appJSON = cJSON_AddObjectToObject(firmwareJSON, "app");
         cJSON_AddStringToObject(appJSON, "name", appDesc->project_name);
         cJSON_AddStringToObject(appJSON, "version", appDesc->version);
         cJSON_AddStringToObject(appJSON, "date", appDesc->date);
         cJSON_AddStringToObject(appJSON, "time", appDesc->time);
 
-        // Get tasks info
-        char taskInfoList[1024];
-        vTaskList(taskInfoList);
-
-        // TODO: Put all task info like: https://github.com/Neoxelox/bow/blob/8ac2ed5170df906e88818264e75fa164f8d736b2/main/main.cpp
-        cJSON *tasksJSON = cJSON_AddObjectToObject(resJSON, "tasks");
-
-        // Get resources info (esp_get_free_heap_size)
-        uint32_t totalRAM;
-        uint32_t usedRAM;
-        uint32_t totalROM;
-        uint32_t usedROM;
-        // ESP_ERROR_CHECK(esp_flash_get_size(NULL, &totalROM));
-        // usedRAM = totalRAM - esp_get_free_heap_size();
-
-        // TODO: Put used/total RAM/ROM
-        cJSON *resourcesJSON = cJSON_AddObjectToObject(resJSON, "resources");
-
         // Get time info
         cJSON *timeJSON = cJSON_AddObjectToObject(resJSON, "time");
+
         cJSON_AddStringToObject(timeJSON, "server", chron::NTP_SERVER_ADDRESS);
         cJSON_AddStringToObject(timeJSON, "zone", chron::TIME_ZONE);
 
         // Get database info
+        cJSON *databaseJSON = cJSON_AddObjectToObject(resJSON, "database");
+
         nvs_stats_t databaseInfo;
         Instance->database->Info(&databaseInfo);
 
-        cJSON *databaseJSON = cJSON_AddObjectToObject(resJSON, "database");
         cJSON_AddNumberToObject(databaseJSON, "total", databaseInfo.total_entries);
         cJSON_AddNumberToObject(databaseJSON, "used", databaseInfo.used_entries);
 
@@ -1993,6 +2068,10 @@ namespace server
             cJSON_AddStringToObject(currentJSON, "gateway", "");
             // TODO: Add MAC info using sprintf, MACSTR and MAC2STR
             cJSON_AddStringToObject(currentJSON, "mac", "");
+            // TODO: Add DNS servers addresses
+            cJSON *dnsJSON = cJSON_AddObjectToObject(resJSON, "dns");
+            cJSON_AddStringToObject(dnsJSON, "main", "");
+            cJSON_AddStringToObject(dnsJSON, "backup", "");
         }
         else
             cJSON_AddNullToObject(resJSON, "current");
