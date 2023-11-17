@@ -87,14 +87,14 @@ namespace chron
             return;
 
         // Configure NTP sync
-        sntp_set_time_sync_notification_cb(this->ntpFunc);
-        sntp_set_sync_interval(SYNC_PERIOD_NTP);
-        sntp_set_sync_mode(SNTP_SYNC_MODE_IMMED);
-        sntp_setoperatingmode(SNTP_OPMODE_POLL);
-        sntp_setservername(0, NTP_SERVER_ADDRESS);
+        esp_sntp_set_time_sync_notification_cb(this->ntpFunc);
+        esp_sntp_set_sync_interval(SYNC_PERIOD_NTP);
+        esp_sntp_set_sync_mode(SNTP_SYNC_MODE_IMMED);
+        esp_sntp_setoperatingmode(SNTP_OPMODE_POLL);
+        esp_sntp_setservername(0, NTP_SERVER_ADDRESS);
 
         // Start NTP sync
-        sntp_init();
+        esp_sntp_init();
 
         this->logger->Debug(TAG, "Started NTP sync with server %s", NTP_SERVER_ADDRESS);
     }

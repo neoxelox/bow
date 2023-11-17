@@ -26,6 +26,8 @@ namespace provisioner
 
     static const int32_t STA_MAX_RETRIES = 10;
     static const TickType_t STA_RETRY_PERIOD = (5 * 60 * 1000) / portTICK_PERIOD_MS; // 5 minutes
+    static const char *STA_DNS_MAIN_SERVER_ADDRESS = "1.1.1.1";
+    static const char *STA_DNS_BACKUP_SERVER_ADDRESS = "8.8.8.8";
 
     typedef struct IP
     {

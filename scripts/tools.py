@@ -34,7 +34,7 @@ class Tools(superinvoke.Tools):
 
     Idf = superinvoke.Tool(
         name="esp-idf",
-        version="5.1.1",
+        version="5.1.2",
         tags=[*Tags.As("*")],
         path="idf.py",
     )

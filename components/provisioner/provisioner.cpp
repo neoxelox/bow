@@ -331,9 +331,23 @@ namespace provisioner
 
             esp_err_t err = esp_netif_set_ip_info(Instance->staHandle, &ipInfo);
 
-            // Force Wi-Fi disconnection to enter station retry loop if static IP cannot be set
+            // Restart DHCP client and force Wi-Fi disconnection to enter
+            // Wi-Fi station retry loop if static IP cannot be set
             if (err != ESP_OK)
+            {
+                ESP_ERROR_CHECK(esp_netif_dhcpc_start(Instance->staHandle));
                 ESP_ERROR_CHECK(esp_wifi_disconnect());
+                break;
+            }
+
+            // Set DNS servers to be able to resolve addresses with a static IP
+            esp_netif_dns_info_t dnsMainInfo, dnsBackupInfo;
+            dnsMainInfo.ip.u_addr.ip4.addr = ipaddr_addr(STA_DNS_MAIN_SERVER_ADDRESS);
+            dnsMainInfo.ip.type = IPADDR_TYPE_V4;
+            ESP_ERROR_CHECK(esp_netif_set_dns_info(Instance->staHandle, ESP_NETIF_DNS_MAIN, &dnsMainInfo));
+            dnsBackupInfo.ip.u_addr.ip4.addr = ipaddr_addr(STA_DNS_BACKUP_SERVER_ADDRESS);
+            dnsBackupInfo.ip.type = IPADDR_TYPE_V4;
+            ESP_ERROR_CHECK(esp_netif_set_dns_info(Instance->staHandle, ESP_NETIF_DNS_BACKUP, &dnsBackupInfo));
 
             break;
         }
@@ -398,6 +412,18 @@ namespace provisioner
             sprintf(gateway, IPSTR, IP2STR(&event->ip_info.gw));
 
             Instance->logger->Debug(TAG, "Got IP: Address=%s | Netmask=%s | Gateway=%s", ip, netmask, gateway);
+
+            esp_netif_dns_info_t dnsMainInfo, dnsBackupInfo;
+            ESP_ERROR_CHECK(esp_netif_get_dns_info(Instance->staHandle, ESP_NETIF_DNS_MAIN, &dnsMainInfo));
+            ESP_ERROR_CHECK(esp_netif_get_dns_info(Instance->staHandle, ESP_NETIF_DNS_BACKUP, &dnsBackupInfo));
+
+            char dnsMain[16 + 1];
+            char dnsBackup[16 + 1];
+            sprintf(dnsMain, IPSTR, IP2STR(&dnsMainInfo.ip.u_addr.ip4));
+            sprintf(dnsBackup, IPSTR, IP2STR(&dnsBackupInfo.ip.u_addr.ip4));
+
+            Instance->logger->Debug(TAG, "Got DNS: Main=%s | Backup=%s", dnsMain, dnsBackup);
+
             Instance->status->SetStatus(status::Statuses::Idle);
             break;
         }

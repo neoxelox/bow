@@ -1863,6 +1863,7 @@ namespace server
         cJSON *chipJSON = cJSON_AddObjectToObject(resJSON, "chip");
         cJSON *wifiJSON = cJSON_AddObjectToObject(chipJSON, "wifi");
         // TODO: Put static IP for AP mode
+        // TODO: Put static DNS for AP mode
         cJSON_AddStringToObject(wifiJSON, "name", provisioner::AP_SSID);
         cJSON_AddStringToObject(wifiJSON, "password", provisioner::AP_PASSWORD);
         // TODO: Put MAC using sprintf, MACSTR and MAC2STR
