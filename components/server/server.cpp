@@ -502,7 +502,7 @@ namespace server
         }
 
         // If provisioner mode is AP use temporary redirects with content instead
-        if (Instance->provisioner->GetMode() == WIFI_MODE_AP)
+        if (Instance->provisioner->GetMode() == WIFI_MODE_APSTA)
         {
             ESP_ERROR_CHECK(httpd_resp_set_status(request, Statuses::_302));
             // iOS requires content in the response to detect a captive portal
@@ -1936,7 +1936,7 @@ namespace server
         // Get built-in softAP network info
         cJSON *networkJSON = cJSON_AddObjectToObject(resJSON, "network");
 
-        if (Instance->provisioner->GetMode() == WIFI_MODE_AP)
+        if (Instance->provisioner->GetMode() == WIFI_MODE_APSTA)
         {
             esp_netif_ip_info_t ipInfo;
             ESP_ERROR_CHECK(esp_netif_get_ip_info(esp_netif_get_handle_from_ifkey("WIFI_AP_DEF"), &ipInfo));

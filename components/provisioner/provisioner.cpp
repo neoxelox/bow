@@ -141,7 +141,7 @@ namespace provisioner
 
     void Provisioner::apStart(Credentials *creds)
     {
-        if (this->GetMode() == WIFI_MODE_AP)
+        if (this->GetMode() == WIFI_MODE_APSTA)
             return;
 
         // Configure Wi-Fi in AP mode
@@ -156,7 +156,7 @@ namespace provisioner
         strcpy((char *)cfg.ap.ssid, creds->SSID);
         strcpy((char *)cfg.ap.password, creds->Password);
 
-        ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_AP));
+        ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_APSTA)); // Use mode softAP + station (idle) to be able to scan networks
         ESP_ERROR_CHECK(esp_wifi_set_country_code("ES", true));
         ESP_ERROR_CHECK(esp_wifi_set_ps(WIFI_PS_NONE)); // Disable Wi-Fi powersaving
         ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_AP, &cfg));
@@ -177,7 +177,7 @@ namespace provisioner
 
     void Provisioner::apStop()
     {
-        if (this->GetMode() != WIFI_MODE_AP)
+        if (this->GetMode() != WIFI_MODE_APSTA)
             return;
 
         // Stop Wi-Fi in AP mode
@@ -235,6 +235,10 @@ namespace provisioner
 
     void Provisioner::apFunc(void *args, esp_event_base_t base, int32_t id, void *data)
     {
+        // Avoid checking for correct mode here because there can be a data race
+        // while switching from softAP + station (idle) to station and services
+        // such as the captive portal won't be able to stop correctly.
+
         switch (id)
         {
         case WIFI_EVENT_AP_START:
@@ -283,6 +287,11 @@ namespace provisioner
 
     void Provisioner::staFunc(void *args, esp_event_base_t base, int32_t id, void *data)
     {
+        // Avoid trying to process station events on softAP + station (idle) mode. This is
+        // only needed here because the other subscribers consume non-important events
+        if (Instance->GetMode() != WIFI_MODE_STA)
+            return;
+
         switch (id)
         {
         case WIFI_EVENT_STA_START:
@@ -509,13 +518,6 @@ namespace provisioner
 
     void Provisioner::GetAvailable(wifi_ap_record_t *available, uint32_t *size)
     {
-        // TODO: Make this work on softAP mode
-        if (this->GetMode() != WIFI_MODE_STA)
-        {
-            *size = 0;
-            return;
-        }
-
         *size = SCAN_MAX_NETWORKS;
         ESP_ERROR_CHECK(esp_wifi_scan_start(NULL, true));
         ESP_ERROR_CHECK(esp_wifi_scan_get_ap_records((uint16_t *)size, available));
