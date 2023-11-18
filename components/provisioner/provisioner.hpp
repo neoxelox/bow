@@ -15,6 +15,7 @@ namespace provisioner
 
     static const char *DB_NAMESPACE = "system";
     static const TickType_t STARTUP_DELAY = (5 * 1000) / portTICK_PERIOD_MS; // 5 seconds
+    static const uint16_t SCAN_MAX_NETWORKS = 25;
 
     static const char *AP_SSID = "Diana Dot";
     static const char *AP_PASSWORD = "Y6LBBSMA";
@@ -80,6 +81,7 @@ namespace provisioner
     public:
         wifi_mode_t GetMode() const;
         void GetCurrent(wifi_ap_record_t *current);
+        void GetAvailable(wifi_ap_record_t *available, uint32_t *size);
         void Retry();
         Credentials *GetCreds();
         void SetCreds(Credentials *creds);

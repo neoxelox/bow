@@ -507,6 +507,21 @@ namespace provisioner
         ESP_ERROR_CHECK(esp_wifi_sta_get_ap_info(current));
     }
 
+    void Provisioner::GetAvailable(wifi_ap_record_t *available, uint32_t *size)
+    {
+        // TODO: Make this work on softAP mode
+        if (this->GetMode() != WIFI_MODE_STA)
+        {
+            *size = 0;
+            return;
+        }
+
+        *size = SCAN_MAX_NETWORKS;
+        ESP_ERROR_CHECK(esp_wifi_scan_start(NULL, true));
+        ESP_ERROR_CHECK(esp_wifi_scan_get_ap_records((uint16_t *)size, available));
+        ESP_ERROR_CHECK(esp_wifi_scan_stop());
+    }
+
     void Provisioner::Retry()
     {
         // Suspend is needed because the provisioner task is in blocked state by delay

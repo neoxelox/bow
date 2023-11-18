@@ -2133,8 +2133,64 @@ namespace server
         else
             cJSON_AddNullToObject(resJSON, "current");
 
-        // TODO: Get available Wi-Fi networks
+        // Get available Wi-Fi networks
         cJSON *availableJSON = cJSON_AddArrayToObject(resJSON, "available");
+
+        wifi_ap_record_t *availableInfo = (wifi_ap_record_t *)malloc(provisioner::SCAN_MAX_NETWORKS * sizeof(wifi_ap_record_t));
+        uint32_t availableInfoSize;
+        Instance->provisioner->GetAvailable(availableInfo, &availableInfoSize);
+
+        for (int i = 0; i < availableInfoSize; i++)
+        {
+            cJSON *networkJSON = cJSON_CreateObject();
+
+            cJSON_AddStringToObject(networkJSON, "name", (char *)availableInfo[i].ssid);
+            cJSON_AddNumberToObject(networkJSON, "strength", availableInfo[i].rssi);
+
+            switch (availableInfo[i].authmode)
+            {
+            case WIFI_AUTH_OPEN:
+                cJSON_AddStringToObject(networkJSON, "security", "OPEN");
+                break;
+            case WIFI_AUTH_WEP:
+                cJSON_AddStringToObject(networkJSON, "security", "WEP");
+                break;
+            case WIFI_AUTH_WPA_PSK:
+                cJSON_AddStringToObject(networkJSON, "security", "WPA-PSK");
+                break;
+            case WIFI_AUTH_WPA2_PSK:
+                cJSON_AddStringToObject(networkJSON, "security", "WPA2-PSK");
+                break;
+            case WIFI_AUTH_WPA_WPA2_PSK:
+                cJSON_AddStringToObject(networkJSON, "security", "WPA/WPA2-PSK");
+                break;
+            case WIFI_AUTH_WPA2_ENTERPRISE:
+                cJSON_AddStringToObject(networkJSON, "security", "WPA2-ENT");
+                break;
+            case WIFI_AUTH_WPA3_PSK:
+                cJSON_AddStringToObject(networkJSON, "security", "WPA3-PSK");
+                break;
+            case WIFI_AUTH_WPA2_WPA3_PSK:
+                cJSON_AddStringToObject(networkJSON, "security", "WPA2/WPA3-PSK");
+                break;
+            case WIFI_AUTH_WAPI_PSK:
+                cJSON_AddStringToObject(networkJSON, "security", "WAPI-PSK");
+                break;
+            case WIFI_AUTH_OWE:
+                cJSON_AddStringToObject(networkJSON, "security", "OWE");
+                break;
+            case WIFI_AUTH_WPA3_ENT_192:
+                cJSON_AddStringToObject(networkJSON, "security", "WPA3-ENT");
+                break;
+            default:
+                cJSON_AddStringToObject(networkJSON, "security", "UNKNOWN");
+                break;
+            }
+
+            cJSON_AddItemToArray(availableJSON, networkJSON);
+        }
+
+        free((void *)availableInfo);
 
         // Send response JSON
         ESP_ERROR_CHECK(Instance->sendJSON(request, resJSON, Statuses::_200));
