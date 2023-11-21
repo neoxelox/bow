@@ -6,6 +6,7 @@
 .superinvoke_cache/
 *.sublime-workspace
 .DS_Store
+setup.http
 __pycache__/
 .pytest_cache/
 .mypy_cache/

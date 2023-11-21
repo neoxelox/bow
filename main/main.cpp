@@ -47,7 +47,7 @@ namespace main
 
             // Inject dependencies
             Instance->description = esp_app_get_description();
-            Instance->logger = logger::Logger::New((esp_log_level_t)ESP_LOG_DEBUG); // TODO: Only for debug, change to CONFIG_LOG_DEFAULT_LEVEL
+            Instance->logger = logger::Logger::New((esp_log_level_t)ESP_LOG_ERROR);
             Instance->status = status::Controller::New(Instance->logger);
             Instance->database = database::Database::New(Instance->logger);
             Instance->provisioner = provisioner::Provisioner::New(Instance->logger, Instance->status, Instance->database);

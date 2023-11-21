@@ -125,6 +125,7 @@ namespace server
         // Register api handlers
         ESP_ERROR_CHECK(httpd_register_uri_handler(this->espServer, &this->apiPostRegisterURIHandler));
         ESP_ERROR_CHECK(httpd_register_uri_handler(this->espServer, &this->apiPostLoginURIHandler));
+        ESP_ERROR_CHECK(httpd_register_uri_handler(this->espServer, &this->apiPostLogoutURIHandler));
 
         ESP_ERROR_CHECK(httpd_register_uri_handler(this->espServer, &this->apiGetUsersURIHandler));
         ESP_ERROR_CHECK(httpd_register_uri_handler(this->espServer, &this->apiGetUserURIHandler));
@@ -617,6 +618,33 @@ namespace server
         cJSON *resJSON = user->JSON();
         delete user;
         cJSON_DeleteItemFromObject(resJSON, "password");
+        ESP_ERROR_CHECK(Instance->sendJSON(request, resJSON, Statuses::_200));
+        cJSON_Delete(resJSON);
+
+        return ESP_OK;
+    }
+
+    esp_err_t Server::apiPostLogoutHandler(httpd_req_t *request)
+    {
+        // Authenticate request user
+        user::User *reqUser = Instance->checkToken(request);
+        if (reqUser == NULL)
+        {
+            ESP_ERROR_CHECK(Instance->sendError(request, Errors::Unauthorized, NULL));
+            return ESP_FAIL;
+        }
+
+        // Empty authentication token
+        free((void *)reqUser->Token);
+        reqUser->Token = strdup("");
+
+        // Save user
+        Instance->user->Set(reqUser);
+
+        delete reqUser;
+
+        // Send response JSON
+        cJSON *resJSON = cJSON_CreateObject();
         ESP_ERROR_CHECK(Instance->sendJSON(request, resJSON, Statuses::_200));
         cJSON_Delete(resJSON);
 

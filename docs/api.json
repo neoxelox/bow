@@ -1,68 +1,68 @@
 {
     "client": "Thunder Client",
     "collectionName": "Bow",
-    "dateExported": "2023-11-16T23:18:17.384Z",
+    "dateExported": "2023-11-21T14:00:44.091Z",
     "version": "1.1",
     "folders": [
         {
-            "_id": "1fe532d0-e099-423c-83e6-09f3286cddba",
+            "_id": "7a786a24-2f71-4041-9763-05d4ba69438c",
             "name": "Auth",
             "containerId": "",
-            "created": "2023-11-15T15:49:09.527Z",
+            "created": "2023-11-21T13:44:59.109Z",
             "sortNum": 10000
         },
         {
-            "_id": "df6228c3-fa00-4e17-8484-b1360baf3c9a",
+            "_id": "b875b283-57a0-48e6-a23e-020ac580db0c",
             "name": "User",
             "containerId": "",
-            "created": "2023-11-15T15:49:09.528Z",
+            "created": "2023-11-21T13:44:59.110Z",
             "sortNum": 20000
         },
         {
-            "_id": "aa8f09b9-32fa-4bec-8adc-6e11fe939409",
+            "_id": "f3e99555-2d2e-483a-932f-b953f75c7331",
             "name": "Device",
             "containerId": "",
-            "created": "2023-11-15T15:49:09.530Z",
+            "created": "2023-11-21T13:44:59.112Z",
             "sortNum": 25000
         },
         {
-            "_id": "74031b9c-6c63-4e84-aa31-039d013a2ba3",
+            "_id": "8099d97a-3891-4658-8355-c257ca4dcb38",
             "name": "Trigger",
             "containerId": "",
-            "created": "2023-11-15T15:49:09.531Z",
+            "created": "2023-11-21T13:44:59.113Z",
             "sortNum": 27500
         },
         {
-            "_id": "694b18d2-1183-45fa-ad12-744558a03b12",
+            "_id": "31341c54-c390-4b67-833f-29cd633af716",
             "name": "Role",
             "containerId": "",
-            "created": "2023-11-15T15:49:09.532Z",
+            "created": "2023-11-21T13:44:59.114Z",
             "sortNum": 28750
         },
         {
-            "_id": "fa68c956-8400-4ab8-b28c-03d64311ecd4",
+            "_id": "d657c2ec-049b-4e57-9fcf-142ce34f34a7",
             "name": "System",
             "containerId": "",
-            "created": "2023-11-15T15:49:09.529Z",
+            "created": "2023-11-21T13:44:59.111Z",
             "sortNum": 30000
         }
     ],
     "requests": [
         {
-            "_id": "cc0409d0-83ab-4c8d-a1c5-01883cdae82d",
-            "colId": "8cd2551e-6af1-4ce4-92c7-3d3bff65e760",
-            "containerId": "1fe532d0-e099-423c-83e6-09f3286cddba",
+            "_id": "75c51eac-56ec-4ab1-98ab-99786b9a5c60",
+            "colId": "8ce32c64-1c40-4784-b9db-eb5ccf232647",
+            "containerId": "7a786a24-2f71-4041-9763-05d4ba69438c",
             "name": "Register",
             "url": "{{BASE_URL}}/register",
             "method": "POST",
             "sortNum": 10000,
-            "created": "2023-11-15T15:49:09.527Z",
-            "modified": "2023-11-15T15:49:09.527Z",
+            "created": "2023-11-21T13:44:59.109Z",
+            "modified": "2023-11-21T13:50:37.364Z",
             "headers": [],
             "params": [],
             "body": {
                 "type": "json",
-                "raw": "{\n  \"name\": \"{{USER_NAME}}\",\n  \"password\": \"{{USER_PASSWORD}}\",\n  \"emoji\": \"0x1f92f\"\n}",
+                "raw": "{\n  \"name\": \"{{USER_NAME}}\",\n  \"password\": \"{{USER_PASSWORD}}\",\n  \"emoji\": \"🐢\"\n}",
                 "form": []
             },
             "tests": [
@@ -75,15 +75,15 @@
             ]
         },
         {
-            "_id": "cf8c4ab3-2b62-4cec-b9c8-2dae55a7d9af",
-            "colId": "8cd2551e-6af1-4ce4-92c7-3d3bff65e760",
-            "containerId": "fa68c956-8400-4ab8-b28c-03d64311ecd4",
+            "_id": "06426069-c5f4-481f-8294-6abb22547363",
+            "colId": "8ce32c64-1c40-4784-b9db-eb5ccf232647",
+            "containerId": "d657c2ec-049b-4e57-9fcf-142ce34f34a7",
             "name": "Get info",
             "url": "{{BASE_URL}}/system/info",
             "method": "GET",
             "sortNum": 10000,
-            "created": "2023-11-15T15:49:09.533Z",
-            "modified": "2023-11-15T15:49:09.533Z",
+            "created": "2023-11-21T13:44:59.115Z",
+            "modified": "2023-11-21T13:44:59.115Z",
             "headers": [],
             "params": [],
             "auth": {
@@ -94,15 +94,15 @@
             "tests": []
         },
         {
-            "_id": "9d83164e-0132-43e9-94a3-12e7bc7a6d38",
-            "colId": "8cd2551e-6af1-4ce4-92c7-3d3bff65e760",
-            "containerId": "aa8f09b9-32fa-4bec-8adc-6e11fe939409",
+            "_id": "9b048f01-8820-4baa-b665-adf0da2c42ca",
+            "colId": "8ce32c64-1c40-4784-b9db-eb5ccf232647",
+            "containerId": "f3e99555-2d2e-483a-932f-b953f75c7331",
             "name": "List",
             "url": "{{BASE_URL}}/devices",
             "method": "GET",
             "sortNum": 10000,
-            "created": "2023-11-15T15:49:09.538Z",
-            "modified": "2023-11-15T15:49:09.538Z",
+            "created": "2023-11-21T13:44:59.120Z",
+            "modified": "2023-11-21T13:44:59.120Z",
             "headers": [],
             "params": [],
             "auth": {
@@ -113,15 +113,15 @@
             "tests": []
         },
         {
-            "_id": "cf6806b2-e393-4e3f-a0cc-08de43eb43e1",
-            "colId": "8cd2551e-6af1-4ce4-92c7-3d3bff65e760",
-            "containerId": "74031b9c-6c63-4e84-aa31-039d013a2ba3",
+            "_id": "d28c510a-ab43-421c-8bd8-af30edf4cc78",
+            "colId": "8ce32c64-1c40-4784-b9db-eb5ccf232647",
+            "containerId": "8099d97a-3891-4658-8355-c257ca4dcb38",
             "name": "List",
             "url": "{{BASE_URL}}/triggers",
             "method": "GET",
             "sortNum": 10000,
-            "created": "2023-11-15T15:49:09.539Z",
-            "modified": "2023-11-15T15:49:09.539Z",
+            "created": "2023-11-21T13:44:59.121Z",
+            "modified": "2023-11-21T13:44:59.121Z",
             "headers": [],
             "params": [],
             "auth": {
@@ -132,15 +132,15 @@
             "tests": []
         },
         {
-            "_id": "49322234-ff92-4020-b155-d0496d7ee039",
-            "colId": "8cd2551e-6af1-4ce4-92c7-3d3bff65e760",
-            "containerId": "694b18d2-1183-45fa-ad12-744558a03b12",
+            "_id": "031af113-2ebf-4004-bb01-3d489f0ce1cd",
+            "colId": "8ce32c64-1c40-4784-b9db-eb5ccf232647",
+            "containerId": "31341c54-c390-4b67-833f-29cd633af716",
             "name": "List",
             "url": "{{BASE_URL}}/roles",
             "method": "GET",
             "sortNum": 10000,
-            "created": "2023-11-15T15:49:09.540Z",
-            "modified": "2023-11-15T15:49:09.540Z",
+            "created": "2023-11-21T13:44:59.122Z",
+            "modified": "2023-11-21T13:44:59.122Z",
             "headers": [],
             "params": [],
             "auth": {
@@ -151,15 +151,15 @@
             "tests": []
         },
         {
-            "_id": "67140fd9-efc8-49e4-bcaf-582dad6fafd8",
-            "colId": "8cd2551e-6af1-4ce4-92c7-3d3bff65e760",
-            "containerId": "1fe532d0-e099-423c-83e6-09f3286cddba",
+            "_id": "6f4e08ee-9519-433a-aed8-348e31b27a95",
+            "colId": "8ce32c64-1c40-4784-b9db-eb5ccf232647",
+            "containerId": "7a786a24-2f71-4041-9763-05d4ba69438c",
             "name": "Login",
             "url": "{{BASE_URL}}/login",
             "method": "POST",
             "sortNum": 20000,
-            "created": "2023-11-15T15:49:09.528Z",
-            "modified": "2023-11-15T15:49:09.528Z",
+            "created": "2023-11-21T13:44:59.110Z",
+            "modified": "2023-11-21T13:44:59.110Z",
             "headers": [],
             "params": [],
             "body": {
@@ -177,15 +177,15 @@
             ]
         },
         {
-            "_id": "f478dd69-5c56-497f-99f6-f007d7d3a25a",
-            "colId": "8cd2551e-6af1-4ce4-92c7-3d3bff65e760",
-            "containerId": "fa68c956-8400-4ab8-b28c-03d64311ecd4",
+            "_id": "6e660d78-1119-4631-bb37-be4303ab4e96",
+            "colId": "8ce32c64-1c40-4784-b9db-eb5ccf232647",
+            "containerId": "d657c2ec-049b-4e57-9fcf-142ce34f34a7",
             "name": "Get time",
             "url": "{{BASE_URL}}/system/time",
             "method": "GET",
             "sortNum": 20000,
-            "created": "2023-11-15T15:49:09.534Z",
-            "modified": "2023-11-15T15:49:09.534Z",
+            "created": "2023-11-21T13:44:59.116Z",
+            "modified": "2023-11-21T13:44:59.116Z",
             "headers": [],
             "params": [],
             "auth": {
@@ -196,15 +196,15 @@
             "tests": []
         },
         {
-            "_id": "3ed1660b-0688-4572-9982-14931ebf736d",
-            "colId": "8cd2551e-6af1-4ce4-92c7-3d3bff65e760",
-            "containerId": "aa8f09b9-32fa-4bec-8adc-6e11fe939409",
+            "_id": "28d46150-2bac-4c22-a95e-29089d051ef6",
+            "colId": "8ce32c64-1c40-4784-b9db-eb5ccf232647",
+            "containerId": "f3e99555-2d2e-483a-932f-b953f75c7331",
             "name": "Get",
             "url": "{{BASE_URL}}/devices/Alarm",
             "method": "GET",
             "sortNum": 20000,
-            "created": "2023-11-15T15:49:09.541Z",
-            "modified": "2023-11-15T15:49:09.541Z",
+            "created": "2023-11-21T13:44:59.123Z",
+            "modified": "2023-11-21T13:44:59.123Z",
             "headers": [],
             "params": [],
             "auth": {
@@ -215,15 +215,15 @@
             "tests": []
         },
         {
-            "_id": "115d7855-c6bc-4025-9369-a4a2e807d86b",
-            "colId": "8cd2551e-6af1-4ce4-92c7-3d3bff65e760",
-            "containerId": "74031b9c-6c63-4e84-aa31-039d013a2ba3",
+            "_id": "a2378f69-745d-4cb9-91a7-fd8740393741",
+            "colId": "8ce32c64-1c40-4784-b9db-eb5ccf232647",
+            "containerId": "8099d97a-3891-4658-8355-c257ca4dcb38",
             "name": "Get",
             "url": "{{BASE_URL}}/triggers/Wake",
             "method": "GET",
             "sortNum": 20000,
-            "created": "2023-11-15T15:49:09.542Z",
-            "modified": "2023-11-15T15:49:09.542Z",
+            "created": "2023-11-21T13:44:59.124Z",
+            "modified": "2023-11-21T13:44:59.124Z",
             "headers": [],
             "params": [],
             "auth": {
@@ -234,15 +234,15 @@
             "tests": []
         },
         {
-            "_id": "4cd919b0-8201-4b35-8c30-8d7b6f0d6e93",
-            "colId": "8cd2551e-6af1-4ce4-92c7-3d3bff65e760",
-            "containerId": "694b18d2-1183-45fa-ad12-744558a03b12",
+            "_id": "5e32b689-db69-4721-8417-cbe4574b075a",
+            "colId": "8ce32c64-1c40-4784-b9db-eb5ccf232647",
+            "containerId": "31341c54-c390-4b67-833f-29cd633af716",
             "name": "Get",
             "url": "{{BASE_URL}}/roles/Guest",
             "method": "GET",
             "sortNum": 20000,
-            "created": "2023-11-15T15:49:09.543Z",
-            "modified": "2023-11-15T15:49:09.543Z",
+            "created": "2023-11-21T13:44:59.125Z",
+            "modified": "2023-11-21T13:44:59.125Z",
             "headers": [],
             "params": [],
             "auth": {
@@ -253,15 +253,15 @@
             "tests": []
         },
         {
-            "_id": "117421e8-2bbd-4646-bef0-6239db6e82ca",
-            "colId": "8cd2551e-6af1-4ce4-92c7-3d3bff65e760",
-            "containerId": "df6228c3-fa00-4e17-8484-b1360baf3c9a",
+            "_id": "0e70c492-8d94-4357-a36b-51975b517324",
+            "colId": "8ce32c64-1c40-4784-b9db-eb5ccf232647",
+            "containerId": "b875b283-57a0-48e6-a23e-020ac580db0c",
             "name": "List",
             "url": "{{BASE_URL}}/users",
             "method": "GET",
             "sortNum": 30000,
-            "created": "2023-11-15T15:49:09.529Z",
-            "modified": "2023-11-15T15:49:09.529Z",
+            "created": "2023-11-21T13:44:59.111Z",
+            "modified": "2023-11-21T13:44:59.111Z",
             "headers": [],
             "params": [],
             "auth": {
@@ -272,15 +272,15 @@
             "tests": []
         },
         {
-            "_id": "cbf502d8-6aa9-4aa6-b9eb-4c59c681dc95",
-            "colId": "8cd2551e-6af1-4ce4-92c7-3d3bff65e760",
-            "containerId": "fa68c956-8400-4ab8-b28c-03d64311ecd4",
+            "_id": "1a99715d-3a87-41d6-ae80-7342623e3a66",
+            "colId": "8ce32c64-1c40-4784-b9db-eb5ccf232647",
+            "containerId": "d657c2ec-049b-4e57-9fcf-142ce34f34a7",
             "name": "Get wifi",
             "url": "{{BASE_URL}}/system/wifi",
             "method": "GET",
             "sortNum": 30000,
-            "created": "2023-11-15T15:49:09.535Z",
-            "modified": "2023-11-15T15:49:09.535Z",
+            "created": "2023-11-21T13:44:59.117Z",
+            "modified": "2023-11-21T13:44:59.117Z",
             "headers": [],
             "params": [],
             "auth": {
@@ -291,20 +291,20 @@
             "tests": []
         },
         {
-            "_id": "0786dc80-d027-41d1-b5a1-384e45745988",
-            "colId": "8cd2551e-6af1-4ce4-92c7-3d3bff65e760",
-            "containerId": "74031b9c-6c63-4e84-aa31-039d013a2ba3",
+            "_id": "360d1db0-d54f-4afc-a2f7-8f375be43c77",
+            "colId": "8ce32c64-1c40-4784-b9db-eb5ccf232647",
+            "containerId": "8099d97a-3891-4658-8355-c257ca4dcb38",
             "name": "Create",
             "url": "{{BASE_URL}}/triggers",
             "method": "POST",
             "sortNum": 30000,
-            "created": "2023-11-15T15:49:09.544Z",
-            "modified": "2023-11-15T15:49:09.544Z",
+            "created": "2023-11-21T13:44:59.126Z",
+            "modified": "2023-11-21T13:55:47.393Z",
             "headers": [],
             "params": [],
             "body": {
                 "type": "json",
-                "raw": "{\n  \"name\": \"Sleep\",\n  \"actuator\": \"Lights-Off\",\n  \"schedule\": \"*/2 * * * ?\",\n  \"emoji\": \"0x1f92f\"\n}",
+                "raw": "{\n  \"name\": \"Sleep\",\n  \"actuator\": \"Lights-Off\",\n  \"schedule\": \"*/2 * * * ?\",\n  \"emoji\": \"🌑\"\n}",
                 "form": []
             },
             "auth": {
@@ -315,20 +315,20 @@
             "tests": []
         },
         {
-            "_id": "7a1a0686-c6b1-4571-a668-88d7b842ca70",
-            "colId": "8cd2551e-6af1-4ce4-92c7-3d3bff65e760",
-            "containerId": "694b18d2-1183-45fa-ad12-744558a03b12",
+            "_id": "33df2e42-3618-478d-8e05-6fdf79ebeb43",
+            "colId": "8ce32c64-1c40-4784-b9db-eb5ccf232647",
+            "containerId": "31341c54-c390-4b67-833f-29cd633af716",
             "name": "Create",
             "url": "{{BASE_URL}}/roles",
             "method": "POST",
             "sortNum": 30000,
-            "created": "2023-11-15T15:49:09.548Z",
-            "modified": "2023-11-15T15:49:09.548Z",
+            "created": "2023-11-21T13:44:59.129Z",
+            "modified": "2023-11-21T14:00:20.642Z",
             "headers": [],
             "params": [],
             "body": {
                 "type": "json",
-                "raw": "{\n  \"name\": \"Member\",\n  \"devices\": [\n    \"Lights\",\n    \"Alarm\"\n  ],\n  \"emoji\": \"0x1f92f\"\n}",
+                "raw": "{\n  \"name\": \"Member\",\n  \"devices\": [\n    \"Lights\",\n    \"Alarm\"\n  ],\n  \"emoji\": \"📛\"\n}",
                 "form": []
             },
             "auth": {
@@ -339,20 +339,20 @@
             "tests": []
         },
         {
-            "_id": "9ecef83f-71f1-4302-bb73-2a9ad4c3b99c",
-            "colId": "8cd2551e-6af1-4ce4-92c7-3d3bff65e760",
-            "containerId": "aa8f09b9-32fa-4bec-8adc-6e11fe939409",
+            "_id": "14a680ec-8605-4373-af05-5c89336186ce",
+            "colId": "8ce32c64-1c40-4784-b9db-eb5ccf232647",
+            "containerId": "f3e99555-2d2e-483a-932f-b953f75c7331",
             "name": "Create",
             "url": "{{BASE_URL}}/devices",
             "method": "POST",
             "sortNum": 30000,
-            "created": "2023-11-15T15:49:09.551Z",
-            "modified": "2023-11-15T15:49:09.551Z",
+            "created": "2023-11-21T13:44:59.132Z",
+            "modified": "2023-11-21T13:54:08.033Z",
             "headers": [],
             "params": [],
             "body": {
                 "type": "json",
-                "raw": "{\n \"name\": \"Lights-On\",\n \"type\": \"ACTUATOR\",\n \"subtype\": \"BUTTON\",\n \"protocol\": 2,\n \"context\" : {\n   \"command\": \"001111011011111000000100100110100\",\n   \"emoji\": \"0x1f7e1\"\n },\n \"emoji\": \"0x1f4a1\"\n}",
+                "raw": "{\n \"name\": \"Lights-On\",\n \"type\": \"ACTUATOR\",\n \"subtype\": \"BUTTON\",\n \"protocol\": 2,\n \"context\" : {\n   \"command\": \"001111011011111000000100100110100\",\n   \"emoji\": \"🔆\"\n },\n \"emoji\": \"💡\"\n}",
                 "form": []
             },
             "auth": {
@@ -363,20 +363,39 @@
             "tests": []
         },
         {
-            "_id": "10668cd1-4001-41ca-a6ab-07234ff53f90",
-            "colId": "8cd2551e-6af1-4ce4-92c7-3d3bff65e760",
-            "containerId": "694b18d2-1183-45fa-ad12-744558a03b12",
+            "_id": "22f5c26c-33ac-41bf-ba25-b5036f3cbd59",
+            "colId": "8ce32c64-1c40-4784-b9db-eb5ccf232647",
+            "containerId": "7a786a24-2f71-4041-9763-05d4ba69438c",
+            "name": "Logout",
+            "url": "{{BASE_URL}}/logout",
+            "method": "POST",
+            "sortNum": 30000,
+            "created": "2023-11-21T13:45:53.189Z",
+            "modified": "2023-11-21T13:46:13.764Z",
+            "headers": [],
+            "params": [],
+            "auth": {
+                "type": "bearer",
+                "bearer": "{{USER_NAME}}:{{USER_TOKEN}}",
+                "bearerPrefix": "{{EMPTY}}"
+            },
+            "tests": []
+        },
+        {
+            "_id": "09e3c70f-cad7-4f0a-a1ed-95eed228833e",
+            "colId": "8ce32c64-1c40-4784-b9db-eb5ccf232647",
+            "containerId": "31341c54-c390-4b67-833f-29cd633af716",
             "name": "Update",
             "url": "{{BASE_URL}}/roles/Reader",
             "method": "PUT",
             "sortNum": 35000,
-            "created": "2023-11-15T15:49:09.550Z",
-            "modified": "2023-11-15T15:49:09.550Z",
+            "created": "2023-11-21T13:44:59.131Z",
+            "modified": "2023-11-21T14:00:27.570Z",
             "headers": [],
             "params": [],
             "body": {
                 "type": "json",
-                "raw": "{\n  \"devices\": [\n    \"Lights\",\n    \"Alarm\"\n  ],\n  \"emoji\": \"0x1f92f\"\n}",
+                "raw": "{\n  \"devices\": [\n    \"Lights\",\n    \"Alarm\"\n  ],\n  \"emoji\": \"📛\"\n}",
                 "form": []
             },
             "auth": {
@@ -387,15 +406,15 @@
             "tests": []
         },
         {
-            "_id": "c7ac6563-bae2-4500-a5b9-9f77e806cf83",
-            "colId": "8cd2551e-6af1-4ce4-92c7-3d3bff65e760",
-            "containerId": "df6228c3-fa00-4e17-8484-b1360baf3c9a",
+            "_id": "f68c97f8-055f-4dd9-88a4-57c7bba0ec84",
+            "colId": "8ce32c64-1c40-4784-b9db-eb5ccf232647",
+            "containerId": "b875b283-57a0-48e6-a23e-020ac580db0c",
             "name": "Get",
             "url": "{{BASE_URL}}/users/Alex",
             "method": "GET",
             "sortNum": 40000,
-            "created": "2023-11-15T15:49:09.530Z",
-            "modified": "2023-11-15T15:49:09.530Z",
+            "created": "2023-11-21T13:44:59.112Z",
+            "modified": "2023-11-21T13:44:59.112Z",
             "headers": [],
             "params": [],
             "auth": {
@@ -406,15 +425,15 @@
             "tests": []
         },
         {
-            "_id": "d80f65cf-6174-4474-b4f0-32444dc2c573",
-            "colId": "8cd2551e-6af1-4ce4-92c7-3d3bff65e760",
-            "containerId": "fa68c956-8400-4ab8-b28c-03d64311ecd4",
+            "_id": "a1f9ffc2-df74-4eae-88fa-5b5a4a032ab3",
+            "colId": "8ce32c64-1c40-4784-b9db-eb5ccf232647",
+            "containerId": "d657c2ec-049b-4e57-9fcf-142ce34f34a7",
             "name": "Update wifi",
             "url": "{{BASE_URL}}/system/wifi",
             "method": "PUT",
             "sortNum": 40000,
-            "created": "2023-11-15T15:49:09.536Z",
-            "modified": "2023-11-16T23:11:15.104Z",
+            "created": "2023-11-21T13:44:59.118Z",
+            "modified": "2023-11-21T13:48:48.353Z",
             "headers": [],
             "params": [],
             "body": {
@@ -430,20 +449,20 @@
             "tests": []
         },
         {
-            "_id": "b91ff3c3-64fb-4778-9dbe-10c5c1f55149",
-            "colId": "8cd2551e-6af1-4ce4-92c7-3d3bff65e760",
-            "containerId": "74031b9c-6c63-4e84-aa31-039d013a2ba3",
+            "_id": "fe8232f9-e7c7-439a-b2eb-46c0df8a3b77",
+            "colId": "8ce32c64-1c40-4784-b9db-eb5ccf232647",
+            "containerId": "8099d97a-3891-4658-8355-c257ca4dcb38",
             "name": "Update",
             "url": "{{BASE_URL}}/triggers/Sleep",
             "method": "PUT",
             "sortNum": 40000,
-            "created": "2023-11-15T15:49:09.545Z",
-            "modified": "2023-11-15T15:49:09.545Z",
+            "created": "2023-11-21T13:44:59.127Z",
+            "modified": "2023-11-21T13:55:53.603Z",
             "headers": [],
             "params": [],
             "body": {
                 "type": "json",
-                "raw": "{\n \"actuator\": \"Lights\",\n \"schedule\": \"*/1 * * * ?\",\n \"emoji\": \"0x1f92f\"\n}",
+                "raw": "{\n \"actuator\": \"Lights\",\n \"schedule\": \"*/1 * * * ?\",\n \"emoji\": \"🌑\"\n}",
                 "form": []
             },
             "auth": {
@@ -454,15 +473,15 @@
             "tests": []
         },
         {
-            "_id": "af7f14db-0c2b-49e7-89f6-22f0367dc891",
-            "colId": "8cd2551e-6af1-4ce4-92c7-3d3bff65e760",
-            "containerId": "694b18d2-1183-45fa-ad12-744558a03b12",
+            "_id": "48a15e29-bbe7-46bc-b0ec-8b2f98fc3c45",
+            "colId": "8ce32c64-1c40-4784-b9db-eb5ccf232647",
+            "containerId": "31341c54-c390-4b67-833f-29cd633af716",
             "name": "Delete",
             "url": "{{BASE_URL}}/roles/Reader",
             "method": "DELETE",
             "sortNum": 40000,
-            "created": "2023-11-15T15:49:09.549Z",
-            "modified": "2023-11-15T15:49:09.549Z",
+            "created": "2023-11-21T13:44:59.130Z",
+            "modified": "2023-11-21T13:44:59.130Z",
             "headers": [],
             "params": [],
             "auth": {
@@ -473,20 +492,20 @@
             "tests": []
         },
         {
-            "_id": "b5146693-c15c-4aab-8b82-c18b433fefd3",
-            "colId": "8cd2551e-6af1-4ce4-92c7-3d3bff65e760",
-            "containerId": "aa8f09b9-32fa-4bec-8adc-6e11fe939409",
+            "_id": "c2f0962b-d919-4fab-b39c-4b6202bd2f89",
+            "colId": "8ce32c64-1c40-4784-b9db-eb5ccf232647",
+            "containerId": "f3e99555-2d2e-483a-932f-b953f75c7331",
             "name": "Update",
             "url": "{{BASE_URL}}/devices/Lights-On",
             "method": "PUT",
             "sortNum": 40000,
-            "created": "2023-11-15T15:49:09.552Z",
-            "modified": "2023-11-15T15:49:09.552Z",
+            "created": "2023-11-21T13:44:59.133Z",
+            "modified": "2023-11-21T13:54:38.607Z",
             "headers": [],
             "params": [],
             "body": {
                 "type": "json",
-                "raw": "{\n  \"protocol\": 2,\n  \"context\": {\n    \"command\": \"001111011011111000000100100110100\",\n    \"emoji\": \"0x1f7e1\"\n  },\n  \"emoji\": \"0x1f4a1\"\n}",
+                "raw": "{\n  \"protocol\": 2,\n  \"context\": {\n    \"command\": \"001111011011111000000100100110100\",\n    \"emoji\": \"🔆\"\n  },\n  \"emoji\": \"💡\"\n}",
                 "form": []
             },
             "auth": {
@@ -497,20 +516,20 @@
             "tests": []
         },
         {
-            "_id": "b14dc7a8-3847-42a7-9481-d60b4949909b",
-            "colId": "8cd2551e-6af1-4ce4-92c7-3d3bff65e760",
-            "containerId": "df6228c3-fa00-4e17-8484-b1360baf3c9a",
+            "_id": "1fc2b796-d65f-40b0-b20d-e55f10965984",
+            "colId": "8ce32c64-1c40-4784-b9db-eb5ccf232647",
+            "containerId": "b875b283-57a0-48e6-a23e-020ac580db0c",
             "name": "Update",
             "url": "{{BASE_URL}}/users/Alex",
             "method": "PUT",
             "sortNum": 50000,
-            "created": "2023-11-15T15:49:09.531Z",
-            "modified": "2023-11-15T15:49:09.531Z",
+            "created": "2023-11-21T13:44:59.113Z",
+            "modified": "2023-11-21T13:51:34.939Z",
             "headers": [],
             "params": [],
             "body": {
                 "type": "json",
-                "raw": "{\n \"password\": \"{{USER_PASSWORD}}\",\n \"emoji\": \"0x1f92f\",\n \"role\": \"Admin\"\n}",
+                "raw": "{\n \"password\": \"{{USER_PASSWORD}}\",\n \"emoji\": \"🐢\",\n \"role\": \"Admin\"\n}",
                 "form": []
             },
             "auth": {
@@ -521,15 +540,15 @@
             "tests": []
         },
         {
-            "_id": "39d5d42c-435e-4c89-8836-c057a5229fa7",
-            "colId": "8cd2551e-6af1-4ce4-92c7-3d3bff65e760",
-            "containerId": "fa68c956-8400-4ab8-b28c-03d64311ecd4",
+            "_id": "07463898-0dd1-4ed8-825f-e70c123ec01b",
+            "colId": "8ce32c64-1c40-4784-b9db-eb5ccf232647",
+            "containerId": "d657c2ec-049b-4e57-9fcf-142ce34f34a7",
             "name": "Reset",
             "url": "{{BASE_URL}}/system/reset",
             "method": "DELETE",
             "sortNum": 50000,
-            "created": "2023-11-15T15:49:09.537Z",
-            "modified": "2023-11-15T15:49:09.537Z",
+            "created": "2023-11-21T13:44:59.119Z",
+            "modified": "2023-11-21T13:44:59.119Z",
             "headers": [],
             "params": [],
             "auth": {
@@ -540,15 +559,15 @@
             "tests": []
         },
         {
-            "_id": "176f4f68-d617-42a1-bb9e-32a5e522b8ea",
-            "colId": "8cd2551e-6af1-4ce4-92c7-3d3bff65e760",
-            "containerId": "74031b9c-6c63-4e84-aa31-039d013a2ba3",
+            "_id": "fe1272c1-1768-4be5-9c75-1651e9ceaac6",
+            "colId": "8ce32c64-1c40-4784-b9db-eb5ccf232647",
+            "containerId": "8099d97a-3891-4658-8355-c257ca4dcb38",
             "name": "Delete",
             "url": "{{BASE_URL}}/triggers/Wake",
             "method": "DELETE",
             "sortNum": 50000,
-            "created": "2023-11-15T15:49:09.546Z",
-            "modified": "2023-11-15T15:49:09.546Z",
+            "created": "2023-11-21T13:44:59.128Z",
+            "modified": "2023-11-21T13:44:59.128Z",
             "headers": [],
             "params": [],
             "auth": {
@@ -559,15 +578,15 @@
             "tests": []
         },
         {
-            "_id": "5cab853e-d9ef-4521-bac8-2a67132aa514",
-            "colId": "8cd2551e-6af1-4ce4-92c7-3d3bff65e760",
-            "containerId": "aa8f09b9-32fa-4bec-8adc-6e11fe939409",
+            "_id": "4f05b980-c4bc-4d08-a594-ba79848e49aa",
+            "colId": "8ce32c64-1c40-4784-b9db-eb5ccf232647",
+            "containerId": "f3e99555-2d2e-483a-932f-b953f75c7331",
             "name": "Delete",
             "url": "{{BASE_URL}}/devices/Lights",
             "method": "DELETE",
             "sortNum": 50000,
-            "created": "2023-11-15T15:49:09.553Z",
-            "modified": "2023-11-15T15:49:09.553Z",
+            "created": "2023-11-21T13:44:59.134Z",
+            "modified": "2023-11-21T13:44:59.134Z",
             "headers": [],
             "params": [],
             "auth": {
@@ -578,15 +597,15 @@
             "tests": []
         },
         {
-            "_id": "39b34fe2-2c9c-4960-8143-b83d1c7a0b3f",
-            "colId": "8cd2551e-6af1-4ce4-92c7-3d3bff65e760",
-            "containerId": "df6228c3-fa00-4e17-8484-b1360baf3c9a",
+            "_id": "035a2472-58d3-4a54-b8cb-d3fe030a97a3",
+            "colId": "8ce32c64-1c40-4784-b9db-eb5ccf232647",
+            "containerId": "b875b283-57a0-48e6-a23e-020ac580db0c",
             "name": "Delete",
             "url": "{{BASE_URL}}/users/Alex2",
             "method": "DELETE",
             "sortNum": 60000,
-            "created": "2023-11-15T15:49:09.532Z",
-            "modified": "2023-11-15T15:49:09.532Z",
+            "created": "2023-11-21T13:44:59.114Z",
+            "modified": "2023-11-21T13:44:59.114Z",
             "headers": [],
             "params": [],
             "auth": {
@@ -597,15 +616,15 @@
             "tests": []
         },
         {
-            "_id": "34b45221-21de-4d20-9158-43c5dde2f862",
-            "colId": "8cd2551e-6af1-4ce4-92c7-3d3bff65e760",
-            "containerId": "aa8f09b9-32fa-4bec-8adc-6e11fe939409",
+            "_id": "c94a116f-d337-4610-8ff1-3e6d8aeeb5bb",
+            "colId": "8ce32c64-1c40-4784-b9db-eb5ccf232647",
+            "containerId": "f3e99555-2d2e-483a-932f-b953f75c7331",
             "name": "Actuate",
             "url": "{{BASE_URL}}/devices/actuate/Lights-On",
             "method": "POST",
             "sortNum": 60000,
-            "created": "2023-11-15T15:49:09.554Z",
-            "modified": "2023-11-15T15:49:09.554Z",
+            "created": "2023-11-21T13:44:59.135Z",
+            "modified": "2023-11-21T13:44:59.135Z",
             "headers": [],
             "params": [],
             "auth": {

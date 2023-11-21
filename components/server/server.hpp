@@ -104,6 +104,7 @@ namespace server
 
         httpd_uri_t apiPostRegisterURIHandler = {"/api/register", Methods::POST, apiPostRegisterHandler};
         httpd_uri_t apiPostLoginURIHandler = {"/api/login", Methods::POST, apiPostLoginHandler};
+        httpd_uri_t apiPostLogoutURIHandler = {"/api/logout", Methods::POST, apiPostLogoutHandler};
 
         httpd_uri_t apiGetUsersURIHandler = {"/api/users", Methods::GET, apiGetUsersHandler};
         httpd_uri_t apiGetUserURIHandler = {"/api/users/*", Methods::GET, apiGetUserHandler};
@@ -153,6 +154,7 @@ namespace server
 
         static esp_err_t apiPostRegisterHandler(httpd_req_t *request);
         static esp_err_t apiPostLoginHandler(httpd_req_t *request);
+        static esp_err_t apiPostLogoutHandler(httpd_req_t *request);
 
         static esp_err_t apiGetUsersHandler(httpd_req_t *request);
         static esp_err_t apiGetUserHandler(httpd_req_t *request);
